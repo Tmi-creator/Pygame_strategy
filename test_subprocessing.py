@@ -1,4 +1,4 @@
 import subprocess
 cmd = "abc.cpp"
 subprocess.call(["g++", cmd])
-subprocess.call("./a.out")
+#subprocess.call("./a.out")
