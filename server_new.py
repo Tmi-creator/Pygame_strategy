@@ -427,7 +427,7 @@ while running:  # основной цикл сервера
             if command[3] == 'capital':
                 if (len(capital1) == 0 or len(capital2) == 0) and str(mapa[command[1]][command[2]]) != '0' and str(
                         map_[command[1]][command[2]]) == '0' and not (15 < int(command[1]) < 26 or 15 < int(
-                    command[2])) and -1 < int(command[1]) < 41 and -1 < int(command[2]) < 41:
+                    command[2]) < 26) and -1 < int(command[1]) < 41 and -1 < int(command[2]) < 41:
                     if capital2 and (abs(int(command[1]) - capital2[0].x) > 4 or abs(
                             int(command[2]) - capital2[0].y) > 4) or not capital2:
 

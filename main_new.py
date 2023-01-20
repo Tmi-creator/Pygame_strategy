@@ -1,17 +1,24 @@
+import Button
 import os
-import time
-import sys
 import pygame
+import socket
+import sys
+import time
+from oop import *
 
 pygame.init()
-import socket
-import Button
 
+buildings = [Capital(-100, -100, 0), City(-100, -100, 0), Sawmill(-100, -100, 0), Farm(-100, -100, 0),
+             FishFarm(-100, -100, 0), StoneMine(-100, -100, 0), MetalMine(-100, -100, 0), PlatinumMine(-100, -100, 0),
+             SuperMine(-100, -100, 0), Shipyard(-100, -100, 0),
+             Tower(-100, -100, 0), Cruiser(-100, -100, 0), Explorer(-100, -100, 0), Artillery(-100, -100, 0),
+             Wall(-100, -100, 0)]
 my_font = 'Lato-Regular.ttf'  # шрифт
 RED = (255, 50, 50)  # цвета
-GREEN = (50, 255, 50)
-RANGE_COLOUR = (128, 0, 128)
-SPEED_COLOUR = (0, 128, 128)
+GREEN = (50, 255, 50)  # зелененька
+RANGE_COLOUR = (128, 0, 128)  # какое то
+SPEED_COLOUR = (0, 128, 128)  # другое
+recources = [0, 0, 0, 0, 0, 0]
 
 
 # внизу классы для кнопок и окошек
@@ -24,22 +31,23 @@ class PosButton(Button.Button):  # координаты выбранной кл�
 
 
 class OutConsoleButton(Button.Button):
-    def __init__(self, x, y, button_text, font_size=20, font_color=RED, button_color=GREEN):
+    def __init__(self, x, y, button_text, font_size=18, font_color=RED, button_color=GREEN):
         Button.Button.__init__(self, x, y, button_text, font_size, font_color, button_color)
         self.is_active = False
-        self.height = 100
-        self.width = 250
+        self.height = 30
+        self.width = 350
+        self.dark_color = self.button_color
 
 
 class ConsoleButton(Button.Button):  # консоль офигеть работает
-    def __init__(self, x, y, button_text, font_size=20, font_color=RED, button_color=GREEN):
+    def __init__(self, x, y, button_text, font_size=18, font_color=RED, button_color=GREEN):
         Button.Button.__init__(self, x, y, button_text, font_size, font_color, button_color)
         self.is_active = False
         self.height = 100
-        self.width = 250
+        self.width = 350
 
 
-class ResourceButton(Button.Button):
+class ResourceButton(Button.Button):  # для отображения ресурсов
     def __init__(self, x, y, button_text, font_size=30, font_color=RED, button_color=GREEN):
         Button.Button.__init__(self, x, y, button_text, font_size, font_color, button_color)
         self.is_active = False
@@ -47,7 +55,44 @@ class ResourceButton(Button.Button):
         self.width = 120
 
 
-class DataThings():
+class BuildButton(Button.Button):  # для отображения ресурсов
+    def __init__(self, x, y, button_text, command='place capital 2 5', name='', font_size=30, font_color=RED,
+                 button_color=GREEN):
+        Button.Button.__init__(self, x, y, button_text, font_size, font_color, button_color)
+        self.is_active = False
+        self.height = 40
+        self.width = 40
+        self.command = command
+        self.cnt = 0
+        self.name = name
+
+    def use(self, x, y, button, button1, button2, descriptions, costs):
+        button.button_text = descriptions[self.name].split('\n')[0]
+        try:
+            button1.button_text = descriptions[self.name].split('\n')[1]
+        except:
+            pass
+        button2.button_text = costs[self.name]
+        self.cnt += 1
+
+        if self.cnt % 2 == 0:
+            self.command = 'READY' + self.command[:6] + str(x) + ' ' + str(y) + ' ' + self.command[7:]
+            button.button_text = ''
+            button1.button_text = ''
+            button2.button_text = ''
+
+    def unuse(self):
+        self.cnt = 0
+
+    def unpress(self, click_x, click_y, super_x, super_y, button, button1, button2, descriptions, costs):
+        self.pressed = False
+        if self.x <= click_x <= self.x + self.width and self.y + self.height >= click_y >= self.y and self.active:
+            self.use(super_x // 20, super_y // 20, button, button1, button2, descriptions, costs)
+        else:
+            self.unuse()
+
+
+class DataThings():  # для хранения всего
     def __init__(self, name, x, y, player, hp, atk=''):
         self.name = name
         self.x = x
@@ -60,11 +105,13 @@ class DataThings():
         self.kill()  # суецыд вы ход и те
 
 
-ultralist = []
+ultralist = []  # супер штука но забыл зачем она
 
-console_button = ConsoleButton(900, 600, '')  # кнопочки и окошки для отображения всего
+console_button = ConsoleButton(820, 600, '')  # кнопочки и окошки для отображения всего
 pos_button = PosButton(820, 20, "")
-out_console_button = OutConsoleButton(900, 700, '')
+out_console_button = OutConsoleButton(820, 700, '')
+out_console_button_2 = OutConsoleButton(820, 730, '')
+out_console_button_cost = OutConsoleButton(820, 760, '')
 resource_button_turn = ResourceButton(820, 80, '')
 resource_button_wood = ResourceButton(820, 130, '')
 resource_button_stone = ResourceButton(820, 180, '')
@@ -72,6 +119,28 @@ resource_button_gold = ResourceButton(820, 230, '')
 resource_button_platinum = ResourceButton(820, 280, '')
 resource_button_metal = ResourceButton(820, 330, '')
 resource_button_food = ResourceButton(820, 380, '')
+
+build_button_capital = BuildButton(980, 80, '1', 'place  capital', 'capital')
+build_button_city = BuildButton(1040, 80, '2', 'place  city', 'city')
+build_button_sawmill = BuildButton(980, 130, '3', 'place  sawmill', 'sawmill')
+build_button_farm = BuildButton(1040, 130, '4', 'place  farm', 'farm')
+build_button_fish_farm = BuildButton(980, 180, '5', 'place  fish_farm', 'fish_farm')
+build_button_stone_mine = BuildButton(1040, 180, '6', 'place  stone_mine', 'stone_mine')
+build_button_metal_mine = BuildButton(980, 230, '7', 'place  metal_mine', 'metal_mine')
+build_button_platinum_mine = BuildButton(1040, 230, '8', 'place  plat_mine', 'plat_mine')
+build_button_super_mine = BuildButton(980, 280, '9', 'place  super_mine', 'super_mine')
+build_button_shipyard = BuildButton(1040, 280, 'a', 'place  shipyard', 'shipyard')
+build_button_tower = BuildButton(980, 330, 'b', 'place  tower', 'tower')
+build_button_explorer = BuildButton(1040, 330, 'c', ' unit  explorer', 'explorer')
+build_button_artillery = BuildButton(980, 380, 'd', ' unit  artillery', 'artillery')
+build_button_cruiser = BuildButton(1040, 380, 'e', ' unit  cruiser', 'cruiser')
+build_button_wall = BuildButton(980, 430, 'f', 'place  wall', 'wall')
+
+build_button_list = [build_button_capital, build_button_city, build_button_sawmill, build_button_farm,
+                     build_button_fish_farm,
+                     build_button_stone_mine, build_button_metal_mine, build_button_platinum_mine,
+                     build_button_super_mine, build_button_shipyard, build_button_tower,
+                     build_button_explorer, build_button_artillery, build_button_cruiser, build_button_wall]
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -135,6 +204,37 @@ def load_image(name, colorkey=None):
         image.set_colorkey(colorkey)
     return image
 
+
+butcap1 = load_image("img1/butcap1.png")
+butcap2 = load_image("img1/butcap2.png")
+butcity1 = load_image("img1/butcity1.png")
+butcity2 = load_image("img1/butcity2.png")  # мега мем: мы забыли добавить
+butfarm1 = load_image("img1/butfarm1.png")  # стены в обозначения и кнопки
+butfarm2 = load_image("img1/butfarm2.png")
+butfish_farm1 = load_image("img1/butfishfarm1.png")
+butfish_farm2 = load_image("img1/butfishfarm2.png")
+butmetal_mine1 = load_image("img1/butmetal_mine1.png")
+butmetal_mine2 = load_image("img1/butmetal_mine2.png")
+butstone_mine1 = load_image("img1/butstone_mine1.png")
+butstone_mine2 = load_image("img1/butstone_mine2.png")
+butsuper_mine1 = load_image("img1/butsuper_mine1.png")
+butsuper_mine2 = load_image("img1/butsuper_mine2.png")
+butshipyard1 = load_image("img1/butshipyard1.png")
+butshipyard2 = load_image("img1/butshipyard2.png")
+butsawmill1 = load_image("img1/butsawmill1.png")
+butsawmill2 = load_image("img1/butsawmill2.png")
+butplat_mine1 = load_image("img1/butplat_mine1.png")
+butplat_mine2 = load_image("img1/butplat_mine2.png")
+butcruiser1 = load_image("img1/butcruiser1.png")
+butcruiser2 = load_image("img1/butcruiser2.png")
+butartillery1 = load_image("img1/butartillery1.png")
+butartillery2 = load_image("img1/butartillery2.png")
+butexplorer1 = load_image("img1/butexplorer1.png")
+butexplorer2 = load_image("img1/butexplorer2.png")
+buttow1 = load_image("img1/buttow1.png")
+buttow2 = load_image("img1/buttow2.png")
+butwall1 = load_image("img1/butwall1.png")
+butwall2 = load_image("img1/butwall2.png")
 
 water_img = load_image("img1/water.png")
 earth_img = load_image("img1/earth.png")
@@ -272,9 +372,20 @@ dict_super_mines = {
     '2': super_mine2_img
 }
 
-dict_shipyards = {
+dict_shipyards = {  # словарь картинок верфей
     '1': shipyard1_img,
     '2': shipyard2_img
+}
+
+buttons222 = [butcap2, butcity2, butsawmill2, butfarm2, butfish_farm2, butstone_mine2, butmetal_mine2, butplat_mine2,
+              butsuper_mine2,
+              butshipyard2, buttow2, butexplorer2, butartillery2, butcruiser2, butwall2]
+buttons111 = [butcap1, butcity1, butsawmill1, butfarm1, butfish_farm1, butstone_mine1, butmetal_mine1, butplat_mine1,
+              butsuper_mine1,
+              butshipyard1, buttow1, butexplorer1, butartillery1, butcruiser1, butwall1]
+superdict_butbuildings111 = {
+    1: buttons111,
+    2: buttons222
 }
 
 allimg = {  # картинки для всего, что стоит на карте
@@ -301,7 +412,8 @@ allimg = {  # картинки для всего, что стоит на кар�
     'K': dict_plat_mines,
     'L': dict_super_mines,
     'M': dict_shipyards,
-    'N': dict_towers
+    'N': dict_towers,
+    'O': dict_walls
 }
 
 imginfo = {  # обозначения всего на карте
@@ -319,16 +431,17 @@ imginfo = {  # обозначения всего на карте
     'B': 'city',
     'C': 'explorer',
     'D': 'artillery',
-    'E': 'cruisers',
+    'E': 'cruiser',
     'F': 'sawmill',
     'G': 'farm',
     'H': 'fish_farm',
     'I': 'stone_mine',
     'J': 'metal_mine',
     'K': 'platinum_mine',
-    'L': "super_mines",
+    'L': "super_mine",
     'M': "shipyard",
-    'N': 'tower'
+    'N': 'tower',
+    'O': 'wall'
 }
 
 dict_range = {  # радиус атаки всех юнитов
@@ -343,6 +456,41 @@ dict_speed = {  # скорость всех юнитов
     'artillery': 2,
     'cruiser': 3,
     'explorer': 4
+}
+descriptions = {
+    'capital': 'main building. should be placement not in\ncenter gives +50 gold and -10 food per turn\n',
+    'city': 'gives some territory to you(5x5)\ngives +25 gold and -5 food per turn\n',
+    'explorer': 'gives some dynamic territory (3x3)\n can be used to build something at other island\n',
+    'artillery': 'attacks enemies at high range\n',
+    'cruiser': 'attaks enemies at middle range\n',
+    'sawmill': 'produces wood.\ngives +25 wood and -5 gold per turn\n',
+    'farm': 'produces food. more than fish farm\n',
+    'fish_farm': 'produces food. less than normal farm\n',
+    'stone_mine': 'produces stone\n',
+    'metal_mine': 'produces metal\n',
+    'plat_mine': 'produces platinum\n',
+    'super_mine': 'produces all!\n',
+    'shipyard': 'with it you can build units nearby\n',
+    'tower': 'automaticly attacks nearest enemies\n',
+    'wall': 'they shall not pass!\n'
+}
+
+costs = {
+    'capital': 'absolutely free',
+    'city': '100 wood and 100 gold',
+    'explorer': '200 wood and 250 gold',
+    'artillery': '50 wood and 350 gold and 200 metal',
+    'cruiser': '50 wood and 150 gold and 100 metal',
+    'sawmill': '50 wood and 75 gold',
+    'farm': '150 wood and 50 gold',
+    'fish_farm': '50 wood and 75 gold',
+    'stone_mine': '125 wood and 75 gold',
+    'metal_mine': '200 wood and 200 gold',
+    'plat_mine': '200 wood and 300 gold',
+    'super_mine': '200 wood and 250 gold',
+    'shipyard': '150 wood and 350 gold',
+    'tower': '150 wood and 150 gold',
+    'wall': '50 wood and 50 gold'
 }
 
 
@@ -377,6 +525,93 @@ def render_map(screen, allimg, data):  # пытаемся рендерить с 
                 screen.blit(allimg[mapa[i][j]][str(map_[i][j])], (j * 20, i * 20))
 
 
+def ultra_render_interface111(screen, x, y):
+    x, y = y, x
+    global superdict_butbuildigs111
+    for i in range(len(buildings)):
+        if mapa[x][y] not in buildings[i].landscape or int(map_[x][y]) != 1 + int(our_turn):
+            build_button_list[i].dark_color = (255, 0, 0)
+            build_button_list[i].button_color = (255, 0, 0)
+        else:
+            if len(buildings[i].cost) == 3:
+                if buildings[i].cost[0] <= recources[0] and buildings[i].cost[1] <= recources[2] and buildings[i].cost[
+                    2] <= recources[4]:
+                    build_button_list[i].dark_color = (0, 255, 0)
+                    build_button_list[i].button_color = (0, 255, 0)
+                else:
+                    build_button_list[i].dark_color = (233, 150, 122)
+                    build_button_list[i].button_color = (233, 150, 122)
+            elif len(buildings[i].cost) == 2:
+                if buildings[i].cost[0] <= recources[0] and buildings[i].cost[1] <= recources[2]:
+                    build_button_list[i].dark_color = (0, 255, 0)
+                    build_button_list[i].button_color = (0, 255, 0)
+                else:
+                    build_button_list[i].dark_color = (233, 150, 122)
+                    build_button_list[i].button_color = (233, 150, 122)
+            else:
+                if mapa[x][y] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
+                    build_button_list[i].dark_color = (255, 0, 0)
+                    build_button_list[i].button_color = (255, 0, 0)
+                else:
+                    build_button_list[i].dark_color = (0, 255, 0)
+                    build_button_list[i].button_color = (0, 255, 0)
+        build_button_list[i].button_color_pressed = list(
+            map(lambda i: (i + 70 if i <= 185 else 255), build_button_list[i].button_color))
+        build_button_list[i].dark_color_pressed = list(
+            map(lambda i: (i + 70 if i <= 185 else 255), build_button_list[i].dark_color))
+    kushaem_kashu = True
+
+    for i in range(5):
+        for j in range(5):
+            if int(map_[x + i - 2][y + j - 2]) != 0:
+                kushaem_kashu = False
+    if not (mapa[x][y] in buildings[0].landscape and len(ultralist) < 2 and kushaem_kashu and not (
+            15 < x < 26 or 15 < y < 26)):
+        build_button_list[0].dark_color = (255, 0, 0)
+        build_button_list[0].button_color = (255, 0, 0)
+    else:
+        build_button_list[0].dark_color = (0, 255, 0)
+        build_button_list[0].button_color = (0, 255, 0)
+
+    build_button_list[0].button_color_pressed = list(
+        map(lambda i: (i + 70 if i <= 185 else 255), build_button_list[0].button_color))
+    build_button_list[0].dark_color_pressed = list(
+        map(lambda i: (i + 70 if i <= 185 else 255), build_button_list[0].dark_color))
+
+    build_button_capital.render(screen)
+    build_button_city.render(screen)
+    build_button_sawmill.render(screen)
+    build_button_farm.render(screen)
+    build_button_fish_farm.render(screen)
+    build_button_stone_mine.render(screen)
+    build_button_metal_mine.render(screen)
+    build_button_platinum_mine.render(screen)
+    build_button_super_mine.render(screen)
+    build_button_shipyard.render(screen)
+    build_button_tower.render(screen)
+    build_button_explorer.render(screen)
+    build_button_artillery.render(screen)
+    build_button_cruiser.render(screen)
+    build_button_wall.render(screen)
+    build_button_cruiser.render(screen)
+
+    screen.blit(superdict_butbuildings111[our_turn + 1][0], (960, 80))
+    screen.blit(superdict_butbuildings111[our_turn + 1][1], (1020, 80))
+    screen.blit(superdict_butbuildings111[our_turn + 1][2], (960, 130))
+    screen.blit(superdict_butbuildings111[our_turn + 1][3], (1020, 130))
+    screen.blit(superdict_butbuildings111[our_turn + 1][4], (960, 180))
+    screen.blit(superdict_butbuildings111[our_turn + 1][5], (1020, 180))
+    screen.blit(superdict_butbuildings111[our_turn + 1][6], (960, 230))
+    screen.blit(superdict_butbuildings111[our_turn + 1][7], (1020, 230))
+    screen.blit(superdict_butbuildings111[our_turn + 1][8], (960, 280))
+    screen.blit(superdict_butbuildings111[our_turn + 1][9], (1020, 280))
+    screen.blit(superdict_butbuildings111[our_turn + 1][10], (960, 330))
+    screen.blit(superdict_butbuildings111[our_turn + 1][11], (1020, 330))
+    screen.blit(superdict_butbuildings111[our_turn + 1][12], (960, 380))
+    screen.blit(superdict_butbuildings111[our_turn + 1][13], (1020, 380))
+    screen.blit(superdict_butbuildings111[our_turn + 1][14], (960, 430))
+
+
 # def write_in_file(f):
 #     f.close()
 #     f = open('input.txt', 'w')
@@ -398,20 +633,24 @@ need_for_speed = False  # для радиуса ходьбы выбранног�
 
 capital_cords = []  # для определения номера игрока
 is_capital = True  # для определения постановки столицы
-our_turn = -2
+our_turn = -2  # чтобы знать который ход наш
 
 
-def resources_turn(data='0 75 0 100 0 0 100 -2'):  # тырим у сервера информацию о номере хода и наших ресурсах
-    global our_turn
-    our_turn = int(data[7])
+def resources_turn(data='0 75 0 100 0 0 100 -2'):  # тырим у сервера информацию о номере хода и наших ресурсах и рисуем
+    global our_turn, recources
+
     data = data.split()
+    recources = [int(float(data[i])) for i in range(1, 7)]
+    our_turn = int(data[7])
+    if our_turn > 1000:
+        our_turn = 0
     foo = 0
     if int(float(data[0])) % 2 == our_turn:
         foo = "НАШ"
     elif int(float(data[0])) % 2 == our_turn + 1 or int(float(data[0])) % 2 == our_turn - 1:
         foo = "НЕТ"
     else:
-        foo = "BES"
+        foo = "КТО"
     resource_button_turn.button_text = str(int(float(data[0]))) + " " + foo
     resource_button_wood.button_text = str(int(float(data[1])))
     resource_button_stone.button_text = str(int(float(data[2])))
@@ -426,6 +665,7 @@ def resources_turn(data='0 75 0 100 0 0 100 -2'):  # тырим у сервер�
     resource_button_platinum.render(screen)
     resource_button_metal.render(screen)
     resource_button_food.render(screen)
+    build_button_cruiser.render(screen)
     screen.blit(turn_img, (890, 80))
     screen.blit(wood_img, (890, 130))
     screen.blit(stone_img, (890, 180))
@@ -436,7 +676,7 @@ def resources_turn(data='0 75 0 100 0 0 100 -2'):  # тырим у сервер�
 
 
 def draw_boards(map_):  # рисуем границы государств
-    colour = [(0, 255, 0), (0, 0, 255)]
+    colour = [(196, 30, 58), (0, 0, 255)]
     try:
         for i in range(40):
             for j in range(40):
@@ -466,7 +706,7 @@ def draw_boards(map_):  # рисуем границы государств
                     except:
                         pass
     except:
-        print("BALBES")
+        pass
 
 
 def draw_frame(x, y):  # выделяем клетку, на которую нажали
@@ -573,6 +813,7 @@ Running = True
 start_menu()
 xframe, yframe = 0, 0
 need_main_loop = 0
+draw_frame(xframe, yframe)
 while Running:  # основной цикл с рендером и геймплеем
     need_main_loop += 1
 
@@ -585,20 +826,22 @@ while Running:  # основной цикл с рендером и геймпл�
 
             if ev.button == 1:
                 console_button.click_check(ev.pos[0], ev.pos[1])
+                for button in build_button_list:
+                    button.click_check(ev.pos[0], ev.pos[1])
                 if ev.pos[0] < 800 and ev.pos[1] < 800:
                     data1 = None
                     for i in ultralist:
                         if int(i.y) == ev.pos[0] // 20 and int(i.x) == ev.pos[1] // 20:
                             data1 = i
                             break
+                    print(data1)
                     if data1:
-                        data1.x, data1.y = data1.y, data1.x
                         if data1.atk == '':
-                            pos_button.button_text = data1.name + ' ' + data1.x + "; " + data1.y + " " + data1.player + ' ' + data1.hp
+                            pos_button.button_text = data1.name + ' ' + data1.y + "; " + data1.x + " " + data1.player + ' ' + data1.hp
                         else:
-                            pos_button.button_text = data1.name + ' ' + data1.x + "; " + data1.y + " " + data1.player + ' ' + data1.hp + " " + data1.atk
-                            draw_range(int(data1.x), int(data1.y))
-                            draw_speed(int(data1.x), int(data1.y))
+                            pos_button.button_text = data1.name + ' ' + data1.y + "; " + data1.x + " " + data1.player + ' ' + data1.hp + " " + data1.atk
+                            draw_range(int(data1.y), int(data1.x))
+                            draw_speed(int(data1.y), int(data1.x))
 
                     else:
                         pos_button.button_text = str(ev.pos[0] // 20) + '; ' + str(ev.pos[1] // 20) + ' ' + imginfo[
@@ -607,9 +850,21 @@ while Running:  # основной цикл с рендером и геймпл�
                     xframe, yframe = ev.pos[0], ev.pos[1]
                     render_map(screen, allimg, data)
                     draw_frame(xframe, yframe)
+                    ultra_render_interface111(screen, ev.pos[0] // 20, ev.pos[1] // 20)
 
         if ev.type == pygame.MOUSEBUTTONUP:
             console_button.unpress(ev.pos[0], ev.pos[1])  # консоль стала активной
+            for button in build_button_list:
+                button.unpress(ev.pos[0], ev.pos[1], xframe, yframe, out_console_button, out_console_button_2,
+                               out_console_button_cost, descriptions, costs)
+                if button.command[:5] == 'READY':
+                    sock.send(button.command[5:].encode())
+                    print(button.command[5:])
+                    temp = button.command[5:].split()
+                    if temp[0] == 'place':
+                        button.command = temp[0] + '  ' + temp[3]
+                    elif temp[0] == 'unit':
+                        button.command = ' ' + temp[0] + '  ' + temp[3]
 
         # if (pause_button.count % 2) == 1:
         #     paused = True
@@ -642,9 +897,12 @@ while Running:  # основной цикл с рендером и геймпл�
         main_loop()
         need_main_loop = 0
         draw_frame(xframe, yframe)
+        ultra_render_interface111(screen, xframe // 20, yframe // 20)
     console_button.render(screen)
     pos_button.render(screen)
     out_console_button.render(screen)
+    out_console_button_2.render(screen)
+    out_console_button_cost.render(screen)
     draw_boards(map_)
 
     # write_in_file(f)

@@ -58,7 +58,6 @@ class Button:
 
     def use(self):
         self.is_active = True
-        print('is active')
 
 
 class PlayButton(Button):
@@ -68,5 +67,4 @@ class PlayButton(Button):
 
     def use(self):
         self.count += 1
-
 

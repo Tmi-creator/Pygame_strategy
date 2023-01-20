@@ -9,6 +9,7 @@ class Building():  # родительский класс здания
         self.landscape = landscape  # где стаивтся, ['lanscape1', 'landscape2']
         self.level = level  # int
         self.landscape_before = landscape_before  # где поставили, str
+        self.max_hp = hp
 
     def destroy(self):  # бабах
         if self.hp <= 0:
@@ -19,7 +20,7 @@ class Building():  # родительский класс здания
 # внизу просто классы зданий
 class Capital(Building):
     def __init__(self, x, y, landscape_before):
-        Building.__init__(self, x, y, landscape_before, 1500, [0, 0], [50, -25],
+        Building.__init__(self, x, y, landscape_before, 1500, [0, 0], [50, -5],
                           ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
                           ['gold', 'food'], 1)
 
@@ -29,7 +30,7 @@ class Capital(Building):
 
 class City(Building):
     def __init__(self, x, y, landscape_before):
-        Building.__init__(self, x, y, landscape_before, 500, [100, 100], [25, -25],
+        Building.__init__(self, x, y, landscape_before, 500, [100, 100], [25, -5],
                           ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
                           ['gold', 'food'], 1)
 
@@ -92,8 +93,14 @@ class Tower(Building):
                 self.target = 'none'
 
 
+class Wall(Building):
+    def __init__(self, x, y, landscape_before):
+        Building.__init__(self, x, y, 1200, [50, 50], [-5], ['1', '2', '3', '4', '5', '6', '7', '8', '9'], ['gold'], 1,
+                          landscape_before)
+
+
 class Unit():  # родительский класс юнита
-    def __init__(self, x, y, hp, cost, outcome, atk, speed, range, level, landscape_before):
+    def __init__(self, x, y, hp, cost, outcome, atk, speed, range, level, landscape_before, can_move=True):
         self.hp = hp  # int
         self.x = x  # int
         self.y = y  # int
@@ -104,6 +111,9 @@ class Unit():  # родительский класс юнита
         self.level = level  # int
         self.landscape_before = landscape_before  # str, на какой клетке стоит юнит. нужен, чтобы не уничтожать землю своим присутствием
         self.range = range  # int
+        self.can_move = can_move
+        self.max_hp = hp
+        self.landscape = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
     def attack(self, target):  # бьем кого-то
         if abs(target.x - self.x) <= self.range and abs(target.y - self.y) <= self.range:
@@ -123,17 +133,17 @@ class Unit():  # родительский класс юнита
 
 class Cruiser(Unit):
     def __init__(self, x, y, landscape_before):
-        Unit.__init__(self, x, y, 150, [0, 150, 100], 25, 75, 3, 4, 1)
         self.landscape_before = landscape_before
+        Unit.__init__(self, x, y, 150, [50, 150, 100], 25, 75, 3, 4, 1, landscape_before)
 
 
 class Explorer(Unit):
     def __init__(self, x, y, landscape_before):
-        Unit.__init__(self, x, y, 50, [200, 250, 0], 50, 50, 4, 2, 1)
+        Unit.__init__(self, x, y, 50, [200, 250, 0], 50, 50, 4, 2, 1, landscape_before)
         self.landscape_before = landscape_before
 
 
 class Artillery(Unit):
     def __init__(self, x, y, landscape_before):
-        Unit.__init__(self, x, y, 100, [0, 350, 200], 50, 100, 2, 6, 1)
+        Unit.__init__(self, x, y, 100, [50, 350, 200], 50, 100, 2, 6, 1, landscape_before)
         self.landscape_before = landscape_before
