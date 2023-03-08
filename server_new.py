@@ -109,19 +109,19 @@ levels2 = {
 }
 # цены на все
 superdict = {  # for i in range(len(superdict[command[3]].cost)):
-    'city': [100, 100],  # superdict[command[3]].cost[i] <= resources2[command[3]].cost[i]
-    'sawmill': [50, 75],  # superdict2[command[3]].append(superdict4[command[3]](command[1], command[2]))
-    'farm': [150, 50],
-    "fish_farm": [50, 75],
-    "stone_mine": [125, 75],
-    "metal_mine": [200, 200],
-    "plat_mine": [200, 300],
-    "super_mine": [200, 250],
-    "shipyard": [150, 350],
-    "tower": [150, 150],
-    'explorer': [200, 250, 0],
-    'artillery': [0, 350, 200],
-    'cruiser': [0, 150, 100]
+    'city': City().cost,  # superdict[command[3]].cost[i] <= resources2[command[3]].cost[i]
+    'sawmill': Sawmill().cost,  # superdict2[command[3]].append(superdict4[command[3]](command[1], command[2]))
+    'farm': Farm().cost,
+    "fish_farm": FishFarm().cost,
+    "stone_mine": StoneMine().cost,
+    "metal_mine": MetalMine().cost,
+    "plat_mine": PlatinumMine().cost,
+    "super_mine": SuperMine().cost,
+    "shipyard": Shipyard().cost,
+    "tower": Tower().cost,
+    'explorer': Explorer().cost,
+    'artillery': Artillery().cost,
+    'cruiser': Cruiser().cost
 }
 # словарь со списками всех построек игрока 1
 superdict1 = {
@@ -229,6 +229,21 @@ superdict5 = {
     "shipyard": 'M',
     "tower": 'N'
 }
+superdict7 = {
+    'city': City().landscape,
+    'explorer': Explorer().landscape,
+    'artillery': Artillery().landscape,
+    'cruiser': Cruiser().landscape,
+    'sawmill': Sawmill().landscape,
+    'farm': Farm().landscape,
+    "fish_farm": FishFarm().landscape,
+    "stone_mine": StoneMine().landscape,
+    "metal_mine": MetalMine().landscape,
+    "plat_mine": PlatinumMine().landscape,
+    "super_mine": SuperMine().landscape,
+    "shipyard": Shipyard().landscape,
+    "tower": Tower().landscape
+}
 
 resources1 = {
     'wood': 75,
@@ -254,8 +269,8 @@ ultradict = {
 }
 
 ultraresources = {
-    '1': resources1,
-    '2': resources2
+    '2': resources1,
+    '1': resources2
 }
 
 imginfo = {
@@ -338,7 +353,7 @@ def queue(attack_queue, move_queue, build_queue):  # тут вроде и так
     pass
 
 
-def income_func(player):  # прибавка ресурсов НЕ ТРОГАТЬ
+def income_func():  # прибавка ресурсов НЕ ТРОГАТЬ
     for player in range(len(ultralist)):
         for i in range(len(ultralist[player])):
             for j in range(len(ultralist[player][i])):
@@ -391,6 +406,7 @@ while running:  # основной цикл сервера
         new_socket.send(s.encode())
     except:
         pass
+    risuemgranit()
 
     # for i in range(2):  # проверка на уничтожение зданий и юнитов
     #     for j in ultralist[i]:
@@ -402,9 +418,10 @@ while running:  # основной цикл сервера
     #                 pass
 
     if turn1 != turn:  # заработок ресурсов в ход
-        turn1 = turn
-        income_func(turn % 2 + 1)  # перенести отсюда в место, где прибавляется ход completed
+        income_func()  # перенести отсюда в место, где прибавляется ход completed
         make_move_great_again(turn % 2 + 1)
+        turn += 1
+        turn1 = turn
 
     data = 0
     try:  # принимаем командs
@@ -415,18 +432,14 @@ while running:  # основной цикл сервера
             turn += 1
             command[1], command[2] = int(command[2]), int(command[1])
 
-            print(111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111)
             # 100000
             # 000000
             # 000000
             # 000000
             # 000001
-            print(command[3] == 'capital' and (len(capital1) == 0 or len(capital2) == 0) and str(
-                mapa[command[1]][command[2]]) != '0' and str(
-                map_[command[1]][command[2]]) == '0')
             if command[3] == 'capital':
                 if (len(capital1) == 0 or len(capital2) == 0) and str(mapa[command[1]][command[2]]) != '0' and str(
-                        map_[command[1]][command[2]]) == '0' and not (15 < int(command[1]) < 26 or 15 < int(
+                        map_[command[1]][command[2]]) == '0' and not (15 < int(command[1]) < 26 and 15 < int(
                     command[2]) < 26) and -1 < int(command[1]) < 41 and -1 < int(command[2]) < 41:
                     if capital2 and (abs(int(command[1]) - capital2[0].x) > 4 or abs(
                             int(command[2]) - capital2[0].y) > 4) or not capital2:
@@ -446,23 +459,44 @@ while running:  # основной цикл сервера
 
             else:
                 if turn % 2 == 0:
-                    true = True
-                    true *= (superdict[command[3]][0] <= resources2['wood'])
+                    print('\n\n\n\n\n')
+                    true = (superdict[command[3]][0] <= resources2['wood'])
+                    print(true)
                     true *= (superdict[command[3]][1] <= resources2['gold'])
+                    print(true)
+                    true *= (str(mapa[command[1]][command[2]]) in superdict7[command[3]])
+                    print(true)
+                    true *= (int(map_[command[1]][command[2]]) == (2 - turn % 2))
+                    print(true)
+                    print(int(map_[command[1]][command[2]]), command[1], command[2], turn, 2 - turn % 2)
+                    for i in map_:
+                        for j in i:
+                            print(j, end=" ")
+                        print()
+                    print('\n\n\n\n\n')
                     if true:
+                        print('v if zashel')
                         ooo = superdict4[command[3]](command[1], command[2], mapa[command[1]][command[2]])
+                        print('объект в порядке')
                         superdict2[command[3]].append(ooo)
+                        print('в супердикт добавился')
                         mapa[command[1]][command[2]] = superdict5[command[3]]
+                        print('обозначение есть')
                         resources2['wood'] -= superdict[command[3]][0]
                         resources2['gold'] -= superdict[command[3]][1]
+                        print('ресурсы списали')
                         news += str(command[3]) + ' ' + str(ooo.x) + ' ' + str(ooo.y) + ' ' + str(
                             turn % 2 + 1) + ' ' + str(ooo.hp)
+                        print('novosti, yoo-hoo')
                         if command[3] == 'tower':  # атаку добавить короче
                             news += " " + str(ooo.atk)
+
                 else:
-                    true = True
-                    true *= (superdict[command[3]][0] <= resources1['wood'])
+                    true = (superdict[command[3]][0] <= resources1['wood'])
                     true *= (superdict[command[3]][1] <= resources1['gold'])
+                    true *= (str(mapa[command[1]][command[2]]) in superdict7[command[3]])
+                    true *= (int(map_[command[1]][command[2]]) == (2 - turn % 2))
+
                     if true:
                         ooo = superdict4[command[3]](command[1], command[2], mapa[command[1]][command[2]])
                         superdict1[command[3]].append(ooo)
@@ -493,34 +527,83 @@ while running:  # основной цикл сервера
                         news += 'update destroy ' + command[2] + " " + command[3]
 
         elif command[0] == 'unit':  # где прибавка хода?
+            command[1], command[2] = int(command[2]), int(command[1])
             if turn % 2 == 0:
                 true = True
                 true *= (superdict[command[3]][0] <= resources2['wood'])
                 true *= (superdict[command[3]][1] <= resources2['gold'])
                 true *= (superdict[command[3]][2] <= resources2['metal'])
-                if true and (
-                        mapa[command[1] - 1][command[2]] == 'M' or mapa[command[1] + 1][command[2]] == 'M' or
-                        mapa[command[1]][
-                            command[2] - 1] == 'M' or mapa[command[1]][command[2] + 1] == 'M'):
+                true1 = False
+                print(true)
+                try:
+                    true1 += (mapa[command[1] - 1][command[2]] == 'M')
+                    print('M')
+                except:
+                    pass
+                try:
+                    true1 += (mapa[command[1] + 1][command[2]] == 'M')
+                    print('M')
+                except:
+                    pass
+                try:
+                    true1 += (mapa[command[1]][command[2] - 1] == 'M')
+                    print('M')
+                except:
+                    pass
+                try:
+                    true1 += (mapa[command[1]][command[2] + 1] == 'M')
+                    print('M')
+                except:
+                    pass
+                print(true)
+                print(*[resources2[i] for i in list(resources2.keys())])
+                print(*[resources1[i] for i in list(resources1.keys())])
+                if true and true1:
+                    print('mi v internet...')
                     ooo = superdict4[command[3]](command[1], command[2], mapa[command[1]][command[2]])
-                    superdict2[command[3]].append(ooo)
+                    print('ооо моя оборона')
+                    superdict22[command[3]].append(ooo)
+                    print('appendnuli v massiv')
                     mapa[command[1]][command[2]] = superdict5[command[3]]  # unit 1 2 cruiser
+                    print('мапа мапа')
                     resources2['wood'] -= superdict[command[3]][0]
                     resources2['gold'] -= superdict[command[3]][1]
                     resources2['metal'] -= superdict[command[3]][2]
+                    print('kapitalizm podebil')
                     news += str(command[3]) + ' ' + str(ooo.x) + ' ' + str(ooo.y) + ' ' + str(turn % 2 + 1) + ' ' + str(
                         ooo.hp) + ' ' + str(ooo.atk)
+                    print('свежие новости')
             else:
                 true = True
                 true *= (superdict[command[3]][0] <= resources1['wood'])
                 true *= (superdict[command[3]][1] <= resources1['gold'])
                 true *= (superdict[command[3]][2] <= resources1['metal'])
-                if true and (
-                        mapa[command[1] - 1][command[2]] == 'M' or mapa[command[1] + 1][command[2]] == 'M' or
-                        mapa[command[1]][
-                            command[2] - 1] == 'M' or mapa[command[1]][command[2] + 1] == 'M'):
+                true1 = False
+                print(true)
+                try:
+                    true1 += (mapa[command[1] - 1][command[2]] == 'M')
+                    print('M')
+                except:
+                    pass
+                try:
+                    true1 += (mapa[command[1] + 1][command[2]] == 'M')
+                    print('M')
+                except:
+                    pass
+                try:
+                    true1 += (mapa[command[1]][command[2] - 1] == 'M')
+                    print('M')
+                except:
+                    pass
+                try:
+                    true1 += (mapa[command[1]][command[2] + 1] == 'M')
+                    print('M')
+                except:
+                    pass
+                print(true)
+                if true and true1:
                     ooo = superdict4[command[3]](command[1], command[2], mapa[command[1]][command[2]])
-                    superdict1[command[3]].append(ooo)
+                    superdict11[command[3]].append(ooo)
                     mapa[command[1]][command[2]] = superdict5[command[3]]
                     resources1['wood'] -= superdict[command[3]][0]
                     resources1['gold'] -= superdict[command[3]][1]
@@ -553,13 +636,57 @@ while running:  # основной цикл сервера
 
 
 
-        elif command[0] == 'attack':  # attack cruiser 2 5 farm 4 5
+        elif command[0] == 'attack':  # attack cruiser 2 3 farm 5 6
             turn += 1
             if turn % 2 + 1 == 1:
                 for i in superdict11[command[1]]:
-                    if superdict11[command[1]][i].x == command[2] and superdict11[command[1]][i].y == command[2]:
-                        pass  # ждем вдохновения
+                    if str(i.x) == command[2] and str(i.y) == command[3] and abs(
+                            int(command[5]) - int(command[2])) <= i.range and abs(
+                            int(command[6]) - int(command[3])) <= i.range:
+                        for j in superdict222[command[4]]:
+                            if str(j.x) == command[5] and str(j.y) == command[6]:
+                                j.hp -= i.atk
+                                if j.hp < 1:
+                                    j.destroy()
+                                    superdict222[command[4]].remove(j)
+                                    try:
+                                        superdict22[command[4]].remove(j)
+                                    except:
+                                        pass
+                                    try:
+                                        superdict2[command[4]].remove(j)
+                                    except:
+                                        pass
+                                    news = 'update destroy ' + str(j.x) + ' ' + str(j.y)
+                                    break
 
+                                news = 'update attack ' + str(j.x) + ' ' + str(j.y) + ' ' + str(j.hp)
+                                break
+
+            else:
+                for i in superdict22[command[1]]:
+                    if str(i.x) == command[2] and str(i.y) == command[3] and abs(
+                            int(command[5]) - int(command[2])) <= i.range and abs(
+                            int(command[6]) - int(command[3])) <= i.range:
+                        for j in superdict111[command[4]]:
+                            if str(j.x) == command[5] and str(j.y) == command[6]:
+                                j.hp -= i.atk
+                                if j.hp < 1:
+                                    j.destroy()
+                                    superdict111[command[4]].remove(j)
+                                    try:
+                                        superdict11[command[4]].remove(j)
+                                    except:
+                                        pass
+                                    try:
+                                        superdict1[command[4]].remove(j)
+                                    except:
+                                        pass
+                                    news = 'update destroy ' + str(j.x) + ' ' + str(j.y)
+                                    break
+
+                                news = 'update attack ' + str(j.x) + ' ' + str(j.y) + ' ' + str(j.hp)
+                                break
 
         elif command[0] == 'skip':
             turn += 1
@@ -595,6 +722,10 @@ while running:  # основной цикл сервера
     #     except:
     #         pass
 
+    map_ = []
+    for i in range(40):  # а вот это фигня с границами
+        a = [0] * 40
+        map_.append(a)
     risuemgranit()
 
     for i in superdict11.keys():

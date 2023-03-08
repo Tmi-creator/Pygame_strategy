@@ -77,7 +77,7 @@ class BuildButton(Button.Button):  # для отображения ресурс�
 
         if self.cnt % 2 == 0:
             self.command = 'READY' + self.command[:6] + str(x) + ' ' + str(y) + ' ' + self.command[7:]
-            button.button_text = ''
+            button.button_text = ''  # срез до шести для тебя шутка? # да
             button1.button_text = ''
             button2.button_text = ''
 
@@ -90,6 +90,90 @@ class BuildButton(Button.Button):  # для отображения ресурс�
             self.use(super_x // 20, super_y // 20, button, button1, button2, descriptions, costs)
         else:
             self.unuse()
+
+
+class AtkButton(Button.Button):
+    def __init__(self, x, y, button_text='Attack', command='attack ', name='', font_size=30, font_color=(255, 255, 255),
+                 button_color=RED):
+        Button.Button.__init__(self, x, y, button_text, font_size, font_color, button_color)
+
+        self.is_active = False
+        self.height = 40
+        self.width = 120
+        self.command = command
+        self.name = name
+        self.click_again = 0
+        self.info = []
+
+    def use(self, name, x, y):
+        if (self.click_again == 1): self.info = []
+        self.info.append(name)
+        self.info.append(x)
+        self.info.append(y)
+
+        if self.click_again == 2:
+            self.command = 'READY' + self.command + self.info[0] + ' ' + self.info[1] + ' ' + self.info[2] + ' ' + \
+                           self.info[3] + ' ' + self.info[4] + ' ' + self.info[5]
+
+    def unpress(self, click_x, click_y, name, x, y):
+        self.pressed = False
+        self.click_again += 1
+        if self.x <= click_x <= self.x + self.width and self.y + self.height >= click_y >= self.y and self.active:
+            self.use(name, x, y)
+
+
+class MoveButton(Button.Button):
+    def __init__(self, x, y, button_text='Move', command='move ', name='', font_size=30, font_color=(255, 255, 255),
+                 button_color=(135, 206, 250)):
+        Button.Button.__init__(self, x, y, button_text, font_size, font_color, button_color)
+
+        self.is_active = False
+        self.height = 40
+        self.width = 120
+        self.command = command
+        self.name = name
+        self.click_again = 0
+        self.info = []
+
+    def use(self, name, x, y):
+        if (self.click_again == 1): self.info = []
+        self.info.append(name)
+        self.info.append(x)
+        self.info.append(y)
+
+        if self.click_again == 2:
+            self.command = 'READY' + self.command + self.info[0] + ' ' + self.info[1] + ' ' + self.info[2] + ' ' + \
+                           self.info[4] + ' ' + self.info[5]
+
+    def unpress(self, click_x, click_y, name, x, y):
+        self.pressed = False
+        self.click_again += 1
+        if self.x <= click_x <= self.x + self.width and self.y + self.height >= click_y >= self.y and self.active:
+            self.use(name, x, y)
+
+
+class RelaxButton(Button.Button):
+    def __init__(self, x, y, button_text='Stop all', command='', name='', font_size=30, font_color=(255, 255, 255),
+                 button_color=(77, 77, 77)):
+        Button.Button.__init__(self, x, y, button_text, font_size, font_color, button_color)
+
+        self.is_active = False
+        self.height = 40
+        self.width = 120
+        self.command = command
+        self.name = name
+
+    def use(self, atk_button, move_button):
+        try:
+            atk_button.click_again = 0
+            move_button.click_again = 0
+        except:
+            pass
+
+    def unpress(self, click_x, click_y, atk_button, move_button):
+        self.pressed = False
+        if self.x <= click_x <= self.x + self.width and self.y + self.height >= click_y >= self.y and self.active:
+            self.use(atk_button, move_button)
 
 
 class DataThings():  # для хранения всего
@@ -131,10 +215,14 @@ build_button_platinum_mine = BuildButton(1040, 230, '8', 'place  plat_mine', 'pl
 build_button_super_mine = BuildButton(980, 280, '9', 'place  super_mine', 'super_mine')
 build_button_shipyard = BuildButton(1040, 280, 'a', 'place  shipyard', 'shipyard')
 build_button_tower = BuildButton(980, 330, 'b', 'place  tower', 'tower')
-build_button_explorer = BuildButton(1040, 330, 'c', ' unit  explorer', 'explorer')
-build_button_artillery = BuildButton(980, 380, 'd', ' unit  artillery', 'artillery')
-build_button_cruiser = BuildButton(1040, 380, 'e', ' unit  cruiser', 'cruiser')
-build_button_wall = BuildButton(980, 430, 'f', 'place  wall', 'wall')
+build_button_explorer = BuildButton(1040, 330, 'c', ' unit  explorer', 'explorer')  # срез исправил а инициализацию нет
+build_button_artillery = BuildButton(980, 380, 'd', ' unit  artillery', 'artillery')  # вот ведь дурак
+build_button_cruiser = BuildButton(1040, 380, 'e', ' unit  cruiser', 'cruiser')  # все работало взял испортил
+build_button_wall = BuildButton(980, 430, 'f', 'place  wall', 'wall')  # еще и код нагрузил фу
+
+move_button = MoveButton(850, 430)
+atk_button = AtkButton(871, 480)  # переделать прием команды в сервере upd уже все норм (ничего не поменялось)
+relax_button = RelaxButton(889, 530)
 
 build_button_list = [build_button_capital, build_button_city, build_button_sawmill, build_button_farm,
                      build_button_fish_farm,
@@ -457,7 +545,7 @@ dict_speed = {  # скорость всех юнитов
     'cruiser': 3,
     'explorer': 4
 }
-descriptions = {
+descriptions = {  # описание зданий и юнтов в кнопках
     'capital': 'main building. should be placement not in\ncenter gives +50 gold and -10 food per turn\n',
     'city': 'gives some territory to you(5x5)\ngives +25 gold and -5 food per turn\n',
     'explorer': 'gives some dynamic territory (3x3)\n can be used to build something at other island\n',
@@ -475,7 +563,7 @@ descriptions = {
     'wall': 'they shall not pass!\n'
 }
 
-costs = {
+costs = {  # цены в кнопках
     'capital': 'absolutely free',
     'city': '100 wood and 100 gold',
     'explorer': '200 wood and 250 gold',
@@ -525,11 +613,43 @@ def render_map(screen, allimg, data):  # пытаемся рендерить с 
                 screen.blit(allimg[mapa[i][j]][str(map_[i][j])], (j * 20, i * 20))
 
 
-def ultra_render_interface111(screen, x, y):
+def proverka_na_port(i, x, y):  # ставить корабли только около верфи, подсветка кнопок
+    true1 = False
+    try:
+        true1 += (mapa[x - 1][y] == 'M')
+    except:
+        pass
+    try:
+        true1 += (mapa[x + 1][y] == 'M')
+    except:
+        pass
+    try:
+        true1 += (mapa[x][y - 1] == 'M')
+    except:
+        pass
+    try:
+        true1 += (mapa[x][y + 1] == 'M')
+    except:
+        pass
+    if (not true1):
+        build_button_list[i].dark_color = (255, 0, 0)
+        build_button_list[i].button_color = (255, 0, 0)
+    else:
+        build_button_list[i].dark_color = (233, 150, 122)
+        build_button_list[i].button_color = (233, 150, 122)
+
+
+def ultra_render_interface111(screen, x, y):  # ультра рендер интерфейс111
     x, y = y, x
-    global superdict_butbuildigs111
-    for i in range(len(buildings)):
-        if mapa[x][y] not in buildings[i].landscape or int(map_[x][y]) != 1 + int(our_turn):
+    global superdict_butbuildigs111  # словарь кнопок
+    for i in range(len(buildings)):  # подсветка кнопок
+        is_port = False
+        if (10 < i < 14):  # units
+            proverka_na_port(i, x, y)  #
+            if build_button_list[i].dark_color == (255, 0, 0):
+                is_port = True
+
+        if is_port or mapa[x][y] not in buildings[i].landscape or int(map_[x][y]) != 1 + int(our_turn):
             build_button_list[i].dark_color = (255, 0, 0)
             build_button_list[i].button_color = (255, 0, 0)
         else:
@@ -563,7 +683,7 @@ def ultra_render_interface111(screen, x, y):
 
     for i in range(5):
         for j in range(5):
-            if int(map_[x + i - 2][y + j - 2]) != 0:
+            if int(map_[(x + i - 2) % 40][(y + j - 2) % 40]) != 0:
                 kushaem_kashu = False
     if not (mapa[x][y] in buildings[0].landscape and len(ultralist) < 2 and kushaem_kashu and not (
             15 < x < 26 or 15 < y < 26)):
@@ -578,7 +698,7 @@ def ultra_render_interface111(screen, x, y):
     build_button_list[0].dark_color_pressed = list(
         map(lambda i: (i + 70 if i <= 185 else 255), build_button_list[0].dark_color))
 
-    build_button_capital.render(screen)
+    build_button_capital.render(screen)  # куча кнопок (рендерится)
     build_button_city.render(screen)
     build_button_sawmill.render(screen)
     build_button_farm.render(screen)
@@ -645,13 +765,13 @@ def resources_turn(data='0 75 0 100 0 0 100 -2'):  # тырим у сервер�
     if our_turn > 1000:
         our_turn = 0
     foo = 0
-    if int(float(data[0])) % 2 == our_turn:
+    if int(float(data[0])) % 2 == our_turn:  # про ход и не задерживайся
         foo = "НАШ"
     elif int(float(data[0])) % 2 == our_turn + 1 or int(float(data[0])) % 2 == our_turn - 1:
         foo = "НЕТ"
     else:
         foo = "КТО"
-    resource_button_turn.button_text = str(int(float(data[0]))) + " " + foo
+    resource_button_turn.button_text = str(int(float(data[0]))) + " " + foo  # опять куча кнопок
     resource_button_wood.button_text = str(int(float(data[1])))
     resource_button_stone.button_text = str(int(float(data[2])))
     resource_button_gold.button_text = str(int(float(data[3])))
@@ -709,28 +829,70 @@ def draw_boards(map_):  # рисуем границы государств
         pass
 
 
+def draw_kvadrat(x, y, x1, y1, wdt, colour):  # инвалидное рисование квадрата через 4 линии
+    print(x, y, x1, y1)
+    # x = max((0, x))
+    # y = max((0, y))
+    # x1 = min((x1, 800))
+    # y1 = min((y1, 800))
+
+    if x < 0:
+        pygame.draw.line(screen, colour, (0, y), (x1, y), wdt)
+        pygame.draw.line(screen, colour, (0, y1), (x1, y1), wdt)
+        x += 800
+        pygame.draw.line(screen, colour, (x, y), (800, y), wdt)
+        pygame.draw.line(screen, colour, (x, y1), (800, y1), wdt)
+    elif x1 > 800:
+        pygame.draw.line(screen, colour, (x, y), (800, y), wdt)
+        pygame.draw.line(screen, colour, (x, y1), (800, y1), wdt)
+        x1 -= 800
+        pygame.draw.line(screen, colour, (0, y), (x1, y), wdt)
+        pygame.draw.line(screen, colour, (0, y1), (x1, y1), wdt)
+    else:
+        pygame.draw.line(screen, colour, (x, y), (x1, y), wdt)
+        pygame.draw.line(screen, colour, (x, y1), (x1, y1), wdt)
+
+    if y < 0:
+        pygame.draw.line(screen, colour, (x, 0), (x, y1), wdt)
+        pygame.draw.line(screen, colour, (x1, 0), (x1, y1), wdt)
+        y += 800
+        pygame.draw.line(screen, colour, (x, y), (x, 800), wdt)
+        pygame.draw.line(screen, colour, (x1, y), (x1, 800), wdt)
+    elif y1 > 800:
+        pygame.draw.line(screen, colour, (x, y), (x, 800), wdt)
+        pygame.draw.line(screen, colour, (x1, y), (x1, 800), wdt)
+        y1 -= 800
+        pygame.draw.line(screen, colour, (x, 0), (x, y1), wdt)
+        pygame.draw.line(screen, colour, (x1, 0), (x1, y1), wdt)
+    else:
+        pygame.draw.line(screen, colour, (x, y), (x, y1), wdt)
+        pygame.draw.line(screen, colour, (x1, y), (x1, y1), wdt)
+
+    print('ура все работает')
+
+
 def draw_frame(x, y):  # выделяем клетку, на которую нажали
     if need_to_frame:
-        pygame.draw.line(screen, RED, (x // 20 * 20, y // 20 * 20), (x // 20 * 20, y // 20 * 20 + 20), 3)
-        pygame.draw.line(screen, RED, (x // 20 * 20, y // 20 * 20), (x // 20 * 20 + 20, y // 20 * 20), 3)
-        pygame.draw.line(screen, RED, (x // 20 * 20 + 20, y // 20 * 20), (x // 20 * 20 + 20, y // 20 * 20 + 20), 3)
-        pygame.draw.line(screen, RED, (x // 20 * 20, y // 20 * 20 + 20), (x // 20 * 20 + 20, y // 20 * 20 + 20), 3)
+        draw_kvadrat(x // 20 * 20, y // 20 * 20, x // 20 * 20 + 20, y // 20 * 20 + 20, 3, RED)
 
 
 def draw_range(x, y):  # рисуем радиус атаки выбранного юнита
     if need_range:
-        pygame.draw.rect(screen, RANGE_COLOUR, (
-            x - dict_range[imginfo[mapa[x, y]]], y - dict_range[imginfo[mapa[x, y]]],
-            x + dict_range[imginfo[mapa[x, y]]],
-            y + dict_range[imginfo[mapa[x, y]]], 3))
+        x, y = int(y), int(x)
+        super_range = dict_range[imginfo[mapa[x // 20][y // 20]]] * 20
+        x, y = y, x
+        draw_kvadrat(x - super_range, y - super_range, x + super_range + 20, y + super_range + 20, 3, RANGE_COLOUR)
+        # pygame.draw.rect(screen, RANGE_COLOUR, (x - dict_range[imginfo[mapa[x][y]]] * 20, y - dict_range[imginfo[mapa[x][y]]] * 20, 40 * dict_range[imginfo[mapa[x][y]]], 40 * dict_range[imginfo[mapa[x][y]]]), 3)
 
 
 def draw_speed(x, y):  # рисуем границы клеток, на которые может походить выбранный юнит
-    if need_for_speed:
-        pygame.draw.rect(screen, SPEED_COLOUR, (
-            x - dict_speed[imginfo[mapa[x, y]]], y - dict_speed[imginfo[mapa[x, y]]],
-            x + dict_speed[imginfo[mapa[x, y]]],
-            y + dict_speed[imginfo[mapa[x, y]]], 3))
+    if need_for_speed:  # ржать тут
+        # x, y = int(x), int(y)
+        # super_speed = dict_speed[imginfo[mapa[x//20][y//20]]] * 20
+        # pygame.draw.rect(screen, SPEED_COLOUR, (
+        #     x - dict_speed[imginfo[mapa[x//20][y//20]]] * 20, y - dict_speed[imginfo[mapa[x//20][y//20]]] * 20,
+        #     40 * dict_speed[imginfo[mapa[x//20][y//20]]], 40 * dict_speed[imginfo[mapa[x//20][y//20]]]), 3)
+        pass
 
 
 def start_menu():  # стартовая менюшка чтобы начать игру
@@ -796,7 +958,9 @@ def main_loop():  # основной гейплей
                         i.x = news[4]
                         i.y = news[5]
             elif news[1] == 'attack':
-                pass
+                for i in ultralist:
+                    if int(i.x) == int(news[2]) and int(i.y) == int(news[3]):
+                        i.hp = news[4]
             # дописать обновление хп при атаке
 
         else:
@@ -814,6 +978,7 @@ start_menu()
 xframe, yframe = 0, 0
 need_main_loop = 0
 draw_frame(xframe, yframe)
+data1 = 0
 while Running:  # основной цикл с рендером и геймплеем
     need_main_loop += 1
 
@@ -828,6 +993,9 @@ while Running:  # основной цикл с рендером и геймпл�
                 console_button.click_check(ev.pos[0], ev.pos[1])
                 for button in build_button_list:
                     button.click_check(ev.pos[0], ev.pos[1])
+                atk_button.click_check(ev.pos[0], ev.pos[1])
+                move_button.click_check(ev.pos[0], ev.pos[1])
+                relax_button.click_check(ev.pos[0], ev.pos[1])
                 if ev.pos[0] < 800 and ev.pos[1] < 800:
                     data1 = None
                     for i in ultralist:
@@ -837,12 +1005,13 @@ while Running:  # основной цикл с рендером и геймпл�
                     print(data1)
                     if data1:
                         if data1.atk == '':
+                            need_range = False
+                            need_for_speed = False
                             pos_button.button_text = data1.name + ' ' + data1.y + "; " + data1.x + " " + data1.player + ' ' + data1.hp
                         else:
+                            need_range = True
+                            need_for_speed = True
                             pos_button.button_text = data1.name + ' ' + data1.y + "; " + data1.x + " " + data1.player + ' ' + data1.hp + " " + data1.atk
-                            draw_range(int(data1.y), int(data1.x))
-                            draw_speed(int(data1.y), int(data1.x))
-
                     else:
                         pos_button.button_text = str(ev.pos[0] // 20) + '; ' + str(ev.pos[1] // 20) + ' ' + imginfo[
                             mapa[ev.pos[1] // 20][ev.pos[0] // 20]]
@@ -865,6 +1034,19 @@ while Running:  # основной цикл с рендером и геймпл�
                         button.command = temp[0] + '  ' + temp[3]
                     elif temp[0] == 'unit':
                         button.command = ' ' + temp[0] + '  ' + temp[3]
+            try:
+                atk_button.unpress(ev.pos[0], ev.pos[1], data1.name, int(data1.x), int(data1.y))
+                move_button.unpress(ev.pos[0], ev.pos[1], data1.name, int(data1.x), int(data1.y))
+            except:
+                atk_button.pressed = False
+                move_button.pressed = False
+            relax_button.unpress(ev.pos[0], ev.pos[1], atk_button, move_button)
+            if atk_button.command[:5] == 'READY':
+                sock.send(button.command[5:].encode())
+                atk_button.command = 'attack '
+            if move_button.command[:5] == 'READY':
+                sock.send(button.command[5:].encode())
+                move_button.command = 'move '
 
         # if (pause_button.count % 2) == 1:
         #     paused = True
@@ -897,12 +1079,21 @@ while Running:  # основной цикл с рендером и геймпл�
         main_loop()
         need_main_loop = 0
         draw_frame(xframe, yframe)
+        try:
+            draw_range(int(data1.y) * 20, int(data1.x) * 20)
+            draw_speed(int(data1.y) * 20, int(data1.x) * 20)  # ацтань уже спать пора
+        except:
+            pass
+
         ultra_render_interface111(screen, xframe // 20, yframe // 20)
     console_button.render(screen)
     pos_button.render(screen)
     out_console_button.render(screen)
     out_console_button_2.render(screen)
     out_console_button_cost.render(screen)
+    move_button.render(screen)
+    atk_button.render(screen)
+    relax_button.render(screen)
     draw_boards(map_)
 
     # write_in_file(f)
