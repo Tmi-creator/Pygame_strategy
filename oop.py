@@ -19,7 +19,7 @@ class Building():  # родительский класс здания
 # внизу просто классы зданий
 class Capital(Building):
     def __init__(self, x=-1000, y=-1000, landscape_before=-1):
-        Building.__init__(self, x, y, landscape_before, 1500, [0, 0], [50, -5],
+        Building.__init__(self, x, y, landscape_before, 50, [0, 0], [50, -5],
                           ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
                           ['gold', 'food'], 1)
 
@@ -73,7 +73,7 @@ class SuperMine(Building):
 
 class Shipyard(Building):
     def __init__(self, x=-1000, y=-1000, landscape_before=-1):
-        Building.__init__(self, x, y, landscape_before, 800, [0, 0], [-15], ['0'], ['gold'], 1)
+        Building.__init__(self, x, y, landscape_before, 50, [0, 0], [-15], ['0'], ['gold'], 1)
 
 
 class Tower(Building):
@@ -97,7 +97,7 @@ class Wall(Building):
 
 
 class Unit():  # родительский класс юнита
-    def __init__(self, x, y, hp, cost, income, atk, speed, range, level, landscape_before, can_move=True):
+    def __init__(self, x, y, hp, cost, income, atk, speed, range, level, landscape_before, can_move=True, can_attack=True):
         self.hp = hp  # int
         self.x = x  # int
         self.y = y  # int
@@ -110,6 +110,7 @@ class Unit():  # родительский класс юнита
         self.landscape_before = landscape_before  # str, на какой клетке стоит юнит. нужен, чтобы не уничтожать землю своим присутствием
         self.range = range  # int
         self.can_move = can_move
+        self.can_attack = can_attack
         self.max_hp = hp
         self.landscape = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 

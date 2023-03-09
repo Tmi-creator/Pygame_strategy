@@ -4,6 +4,7 @@ import pygame
 import socket
 import sys
 import time
+import random
 from oop import *
 
 pygame.init()
@@ -27,7 +28,7 @@ class PosButton(Button.Button):  # координаты выбранной кл�
         Button.Button.__init__(self, x, y, button_text, font_size, font_color, button_color)
         self.is_active = False
         self.height = 40
-        self.width = 300
+        self.width = 370
 
 
 class OutConsoleButton(Button.Button):
@@ -77,7 +78,7 @@ class BuildButton(Button.Button):  # для отображения ресурс�
 
         if self.cnt % 2 == 0:
             self.command = 'READY' + self.command[:6] + str(x) + ' ' + str(y) + ' ' + self.command[7:]
-            button.button_text = ''  # срез до шести для тебя шутка? # да
+            button.button_text = ''
             button1.button_text = ''
             button2.button_text = ''
 
@@ -108,17 +109,19 @@ class AtkButton(Button.Button):
     def use(self, name, x, y):
         if (self.click_again == 1): self.info = []
         self.info.append(name)
-        self.info.append(x)
-        self.info.append(y)
+        self.info.append(str(x))
+        self.info.append(str(y))
 
         if self.click_again == 2:
+            self.info = [str(i) for i in self.info]
             self.command = 'READY' + self.command + self.info[0] + ' ' + self.info[1] + ' ' + self.info[2] + ' ' + \
                            self.info[3] + ' ' + self.info[4] + ' ' + self.info[5]
+            self.click_again = 0
 
     def unpress(self, click_x, click_y, name, x, y):
         self.pressed = False
-        self.click_again += 1
         if self.x <= click_x <= self.x + self.width and self.y + self.height >= click_y >= self.y and self.active:
+            self.click_again += 1
             self.use(name, x, y)
 
 
@@ -138,17 +141,18 @@ class MoveButton(Button.Button):
     def use(self, name, x, y):
         if (self.click_again == 1): self.info = []
         self.info.append(name)
-        self.info.append(x)
-        self.info.append(y)
-
+        self.info.append(str(x))
+        self.info.append(str(y))
         if self.click_again == 2:
+            self.info = [str(i) for i in self.info]
             self.command = 'READY' + self.command + self.info[0] + ' ' + self.info[1] + ' ' + self.info[2] + ' ' + \
                            self.info[4] + ' ' + self.info[5]
+            self.click_again = 0
 
     def unpress(self, click_x, click_y, name, x, y):
         self.pressed = False
-        self.click_again += 1
         if self.x <= click_x <= self.x + self.width and self.y + self.height >= click_y >= self.y and self.active:
+            self.click_again += 1
             self.use(name, x, y)
 
 
@@ -185,8 +189,51 @@ class DataThings():  # для хранения всего
         self.hp = hp
         self.atk = atk
 
-    def destroy(self):
-        self.kill()  # суецыд вы ход и те
+
+screen_rect = (0, 0, 1200, 800)
+
+
+def load_image(name, colorkey=None):
+    fullname = os.path.join(os.path.dirname(__file__), name)
+    # если файл не существует, то выходим
+    if not os.path.isfile(fullname):
+        print(f"Файл с изображением '{fullname}' не найден")
+        sys.exit()
+    image = pygame.image.load(fullname)
+    if colorkey:
+        image.set_colorkey(colorkey)
+    return image
+
+
+class Particle(pygame.sprite.Sprite):
+    # сгенерируем частицы разного размера
+    fire = [load_image("img1/star.png")]
+    for scale in (5, 10, 20):
+        fire.append(pygame.transform.scale(fire[0], (scale, scale)))
+
+    def __init__(self, pos, dx, dy):
+        super().__init__(all_sprites)
+        self.image = random.choice(self.fire)
+        self.rect = self.image.get_rect()
+
+        # у каждой частицы своя скорость — это вектор
+        self.velocity = [dx, dy]
+        # и свои координаты
+        self.rect.x, self.rect.y = pos
+
+        # гравитация будет одинаковой (значение константы)
+        self.gravity = 0.1
+
+    def update(self):
+        # применяем гравитационный эффект:
+        # движение с ускорением под действием гравитации
+        self.velocity[1] += self.gravity
+        # перемещаем частицу
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        # убиваем, если частица ушла за экран
+        if not self.rect.colliderect(screen_rect):
+            self.kill()
 
 
 ultralist = []  # супер штука но забыл зачем она
@@ -215,10 +262,10 @@ build_button_platinum_mine = BuildButton(1040, 230, '8', 'place  plat_mine', 'pl
 build_button_super_mine = BuildButton(980, 280, '9', 'place  super_mine', 'super_mine')
 build_button_shipyard = BuildButton(1040, 280, 'a', 'place  shipyard', 'shipyard')
 build_button_tower = BuildButton(980, 330, 'b', 'place  tower', 'tower')
-build_button_explorer = BuildButton(1040, 330, 'c', ' unit  explorer', 'explorer')  # срез исправил а инициализацию нет
-build_button_artillery = BuildButton(980, 380, 'd', ' unit  artillery', 'artillery')  # вот ведь дурак
-build_button_cruiser = BuildButton(1040, 380, 'e', ' unit  cruiser', 'cruiser')  # все работало взял испортил
-build_button_wall = BuildButton(980, 430, 'f', 'place  wall', 'wall')  # еще и код нагрузил фу
+build_button_explorer = BuildButton(1040, 330, 'c', ' unit  explorer', 'explorer')
+build_button_artillery = BuildButton(980, 380, 'd', ' unit  artillery', 'artillery')
+build_button_cruiser = BuildButton(1040, 380, 'e', ' unit  cruiser', 'cruiser')
+build_button_wall = BuildButton(980, 430, 'f', 'place  wall', 'wall')
 
 move_button = MoveButton(850, 430)
 atk_button = AtkButton(871, 480)  # переделать прием команды в сервере upd уже все норм (ничего не поменялось)
@@ -241,7 +288,6 @@ CLOCK = pygame.time.Clock()
 
 dat = sock.recv(2 ** 20)
 dat = dat.decode()
-print(dat)
 f = open("output.txt", "w+")
 f.write(dat)
 f.close()  # что это за бесполезная строка? w+ же и так позволяет читать...
@@ -258,7 +304,6 @@ map_ = []
 for i in range(40):  # а вот это фигня с границами
     a = ["0"] * 40
     map_.append(a)
-
 
 # x1, y1 = 9 + randint(-3, 3), 9 + randint(-3, 3)
 # x2, y2 = 29 + randint(-3, 3), 29 + randint(-3, 3)
@@ -281,16 +326,6 @@ for i in range(40):  # а вот это фигня с границами
 # for i in range(3):
 #     for j in range(3):
 #         map_[x4 - 1 + i][y4 - 1 + j] = 4
-def load_image(name, colorkey=None):
-    fullname = os.path.join(os.path.dirname(__file__), name)
-    # если файл не существует, то выходим
-    if not os.path.isfile(fullname):
-        print(f"Файл с изображением '{fullname}' не найден")
-        sys.exit()
-    image = pygame.image.load(fullname)
-    if colorkey:
-        image.set_colorkey(colorkey)
-    return image
 
 
 butcap1 = load_image("img1/butcap1.png")
@@ -631,7 +666,7 @@ def proverka_na_port(i, x, y):  # ставить корабли только о�
         true1 += (mapa[x][y + 1] == 'M')
     except:
         pass
-    if (not true1):
+    if not true1:
         build_button_list[i].dark_color = (255, 0, 0)
         build_button_list[i].button_color = (255, 0, 0)
     else:
@@ -830,24 +865,20 @@ def draw_boards(map_):  # рисуем границы государств
 
 
 def draw_kvadrat(x, y, x1, y1, wdt, colour):  # инвалидное рисование квадрата через 4 линии
-    print(x, y, x1, y1)
-    # x = max((0, x))
-    # y = max((0, y))
-    # x1 = min((x1, 800))
-    # y1 = min((y1, 800))
-
     if x < 0:
         pygame.draw.line(screen, colour, (0, y), (x1, y), wdt)
         pygame.draw.line(screen, colour, (0, y1), (x1, y1), wdt)
         x += 800
         pygame.draw.line(screen, colour, (x, y), (800, y), wdt)
         pygame.draw.line(screen, colour, (x, y1), (800, y1), wdt)
+        x -= 800
     elif x1 > 800:
         pygame.draw.line(screen, colour, (x, y), (800, y), wdt)
         pygame.draw.line(screen, colour, (x, y1), (800, y1), wdt)
         x1 -= 800
         pygame.draw.line(screen, colour, (0, y), (x1, y), wdt)
         pygame.draw.line(screen, colour, (0, y1), (x1, y1), wdt)
+        x1 += 800
     else:
         pygame.draw.line(screen, colour, (x, y), (x1, y), wdt)
         pygame.draw.line(screen, colour, (x, y1), (x1, y1), wdt)
@@ -868,33 +899,42 @@ def draw_kvadrat(x, y, x1, y1, wdt, colour):  # инвалидное рисов�
         pygame.draw.line(screen, colour, (x, y), (x, y1), wdt)
         pygame.draw.line(screen, colour, (x1, y), (x1, y1), wdt)
 
-    print('ура все работает')
+    if x < 0:
+        pygame.draw.line(screen, colour, (0, y), (x1, y), wdt)
+        pygame.draw.line(screen, colour, (0, y1), (x1, y1), wdt)
+        x += 800
+        pygame.draw.line(screen, colour, (x, y), (800, y), wdt)
+        pygame.draw.line(screen, colour, (x, y1), (800, y1), wdt)
+    elif x1 > 800:
+        pygame.draw.line(screen, colour, (x, y), (800, y), wdt)
+        pygame.draw.line(screen, colour, (x, y1), (800, y1), wdt)
+        x1 -= 800
+        pygame.draw.line(screen, colour, (0, y), (x1, y), wdt)
+        pygame.draw.line(screen, colour, (0, y1), (x1, y1), wdt)
+    else:
+        pygame.draw.line(screen, colour, (x, y), (x1, y), wdt)
+        pygame.draw.line(screen, colour, (x, y1), (x1, y1), wdt)
 
 
 def draw_frame(x, y):  # выделяем клетку, на которую нажали
     if need_to_frame:
-        pass
-        # draw_kvadrat(x // 20 * 20, y // 20 * 20, x // 20 * 20 + 20, y // 20 * 20 + 20, 3, RED)
+        draw_kvadrat(x // 20 * 20, y // 20 * 20, x // 20 * 20 + 20, y // 20 * 20 + 20, 3, RED)
 
 
 def draw_range(x, y):  # рисуем радиус атаки выбранного юнита
     if need_range:
-        print('!')
         x, y = int(y), int(x)
         super_range = dict_range[imginfo[mapa[x // 20][y // 20]]] * 20
         x, y = y, x
         draw_kvadrat(x - super_range, y - super_range, x + super_range + 20, y + super_range + 20, 3, RANGE_COLOUR)
-        # pygame.draw.rect(screen, RANGE_COLOUR, (x - dict_range[imginfo[mapa[x][y]]] * 20, y - dict_range[imginfo[mapa[x][y]]] * 20, 40 * dict_range[imginfo[mapa[x][y]]], 40 * dict_range[imginfo[mapa[x][y]]]), 3)
 
 
 def draw_speed(x, y):  # рисуем границы клеток, на которые может походить выбранный юнит
     if need_for_speed:  # ржать тут
-        # x, y = int(x), int(y)
-        # super_speed = dict_speed[imginfo[mapa[x//20][y//20]]] * 20
-        # pygame.draw.rect(screen, SPEED_COLOUR, (
-        #     x - dict_speed[imginfo[mapa[x//20][y//20]]] * 20, y - dict_speed[imginfo[mapa[x//20][y//20]]] * 20,
-        #     40 * dict_speed[imginfo[mapa[x//20][y//20]]], 40 * dict_speed[imginfo[mapa[x//20][y//20]]]), 3)
-        pass
+        x, y = int(y), int(x)
+        super_speed = dict_speed[imginfo[mapa[x // 20][y // 20]]] * 20
+        x, y = y, x
+        draw_kvadrat(x - super_speed, y - super_speed, x + super_speed + 20, y + super_speed + 20, 3, SPEED_COLOUR)
 
 
 def start_menu():  # стартовая менюшка чтобы начать игру
@@ -927,17 +967,21 @@ def start_menu():  # стартовая менюшка чтобы начать �
 
 
 data = 0
+Running = True
 
 
 def main_loop():  # основной гейплей
     global map_
     global mapa  # должен был быть... теперь тут только получение карты, ха-ха
     global data
-    sock.send('give map'.encode())
+    # sock.send('give map'.encode()) # это нам больше не нужно
     data = sock.recv(2 ** 20).decode()  # получаем карту
+    if data == 'you win':
+        post_menu_fun()
+    if data == 'you lose':
+        post_menu_unfun()
     new_data = data.split('/')
     data = new_data[0]
-    # print(data)
     abcd = data[len(data) // 2:]
     abcd = abcd.split()
     data = data[:len(data) // 2]
@@ -948,12 +992,14 @@ def main_loop():  # основной гейплей
     render_map(screen, allimg, data)
 
     news = new_data[1].split()
+
     if news:
+        print(news)
         if news[0] == 'update':
             if news[1] == 'destroy':
                 for i in ultralist:
                     if int(i.x) == int(news[2]) and int(i.y) == int(news[3]):
-                        i.destroy()
+                        ultralist.remove(i)
             elif news[1] == 'move':
                 for i in ultralist:
                     if int(i.x) == int(news[2]) and int(i.y) == int(news[3]):
@@ -963,24 +1009,67 @@ def main_loop():  # основной гейплей
                 for i in ultralist:
                     if int(i.x) == int(news[2]) and int(i.y) == int(news[3]):
                         i.hp = news[4]
-            # дописать обновление хп при атаке
-
         else:
             ultralist.append(DataThings(*[i for i in news]))  # повыпендривались зато
 
     resources_turn(new_data[2])
 
 
-def post_menu():  # активация при разрушении столицы
-    pass
+def create_particles(position):
+    # количество создаваемых частиц
+    particle_count = 20
+    # возможные скорости
+    numbers = range(-5, 6)
+    for _ in range(particle_count):
+        Particle(position, random.choice(numbers), random.choice(numbers))
 
 
-Running = True
+def post_menu_fun():  # активация при разрушении столицы
+    global Running
+    x = 0
+    while Running:
+        if (x % 50 == 0):
+            create_particles((100, 100))
+            create_particles((1000, 600))
+            create_particles((600, 400))
+            create_particles((100, 600))
+            create_particles((1000, 100))
+        all_sprites.update()
+        screen.fill((0, 0, 0))
+        all_sprites.draw(screen)
+        pygame.display.flip()
+        CLOCK.tick(50)
+        if x == 50 * 20:
+            Running = False
+    exit(0)
+
+
+def post_menu_unfun():
+    global Running
+    x = 0
+    while Running:
+        if (x % 50 == 0):
+            create_particles((100, 100))
+            create_particles((1000, 600))
+            create_particles((600, 400))
+            create_particles((100, 600))
+            create_particles((1000, 100))
+        all_sprites.update()
+        screen.fill((0, 0, 0))
+        all_sprites.draw(screen)
+        pygame.display.flip()
+        CLOCK.tick(50)
+        if x == 50 * 20:
+            Running = False
+    exit(0)
+
+
 start_menu()
 xframe, yframe = 0, 0
 need_main_loop = 0
 draw_frame(xframe, yframe)
 data1 = 0
+all_sprites = pygame.sprite.Group()
 while Running:  # основной цикл с рендером и геймплеем
     need_main_loop += 1
 
@@ -1004,7 +1093,6 @@ while Running:  # основной цикл с рендером и геймпл�
                         if int(i.y) == ev.pos[0] // 20 and int(i.x) == ev.pos[1] // 20:
                             data1 = i
                             break
-                    print(data1)
                     if data1:
                         if data1.atk == '':
                             need_range = False
@@ -1024,30 +1112,38 @@ while Running:  # основной цикл с рендером и геймпл�
                     ultra_render_interface111(screen, ev.pos[0] // 20, ev.pos[1] // 20)
 
         if ev.type == pygame.MOUSEBUTTONUP:
+
             console_button.unpress(ev.pos[0], ev.pos[1])  # консоль стала активной
             for button in build_button_list:
                 button.unpress(ev.pos[0], ev.pos[1], xframe, yframe, out_console_button, out_console_button_2,
                                out_console_button_cost, descriptions, costs)
                 if button.command[:5] == 'READY':
                     sock.send(button.command[5:].encode())
-                    print(button.command[5:])
                     temp = button.command[5:].split()
                     if temp[0] == 'place':
                         button.command = temp[0] + '  ' + temp[3]
                     elif temp[0] == 'unit':
                         button.command = ' ' + temp[0] + '  ' + temp[3]
             try:
-                atk_button.unpress(ev.pos[0], ev.pos[1], data1.name, int(data1.x), int(data1.y))
-                move_button.unpress(ev.pos[0], ev.pos[1], data1.name, int(data1.x), int(data1.y))
+                try:
+                    atk_button.unpress(ev.pos[0], ev.pos[1], data1.name, int(data1.x), int(data1.y))
+                except:
+                    pass
+                try:
+                    move_button.unpress(ev.pos[0], ev.pos[1], data1.name, int(data1.x), int(data1.y))
+                except:
+                    move_button.unpress(ev.pos[0], ev.pos[1], 'balbes', int(yframe) // 20, int(xframe) // 20)
             except:
                 atk_button.pressed = False
                 move_button.pressed = False
+
             relax_button.unpress(ev.pos[0], ev.pos[1], atk_button, move_button)
             if atk_button.command[:5] == 'READY':
-                sock.send(button.command[5:].encode())
+                sock.send(atk_button.command[5:].encode())
                 atk_button.command = 'attack '
+
             if move_button.command[:5] == 'READY':
-                sock.send(button.command[5:].encode())
+                sock.send(move_button.command[5:].encode())
                 move_button.command = 'move '
 
         # if (pause_button.count % 2) == 1:

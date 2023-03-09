@@ -8,6 +8,7 @@ from oop import *
 subprocess.run(["a.exe", "-config filename"])
 subprocess.run(["smooth2.exe", "-config filename"])
 
+# turn % 2 == 0 - 1player, turn%2 == 1  - 2 player
 # cmd1 = "smooth2.cpp"
 # subprocess.call(["g++", cmd1])
 # subprocess.call("./a.out")
@@ -18,7 +19,6 @@ main_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 main_socket.bind(('localhost', 9999))
 main_socket.setblocking(False)
 main_socket.listen(10)
-print('socket works')
 players_sockets = []
 players_addr = []
 running = True
@@ -73,9 +73,15 @@ superlist1 = [capital1, cities1, explorers1, artilleries1, cruisers1, sawmills1,
               stone_mines1, metal_mines1, plat_mines1, super_mines1, shipyards1, towers1]
 superlist2 = [capital2, cities2, explorers2, artilleries2, cruisers2, sawmills2, farms2, fish_farms2,
               stone_mines2, metal_mines2, plat_mines2, super_mines2, shipyards2, towers2]
+
+ecolist1 = [capital1, cities1, explorers2, artilleries2, cruisers2, sawmills1, farms1, fish_farms1,
+            stone_mines1, metal_mines1, plat_mines1, super_mines1, shipyards1, towers1]
+ecolist2 = [capital2, cities2, explorers1, artilleries1, cruisers1, sawmills2, farms2, fish_farms2,
+            stone_mines2, metal_mines2, plat_mines2, super_mines2, shipyards2, towers2]
 superborders = [capital1, capital2, cities1, cities2, explorers1, explorers2]
 
 ultralist = [superlist1, superlist2]
+ultralist1 = [ecolist1, ecolist2]
 
 upgrade_cost = [[50, 20], [50, 20]]  # stone gold
 # upgrade cost * (1.1 ** upgrade_cnt)
@@ -269,8 +275,8 @@ ultradict = {
 }
 
 ultraresources = {
-    '2': resources1,
-    '1': resources2
+    '1': resources1,
+    '2': resources2
 }
 
 imginfo = {
@@ -354,12 +360,13 @@ def queue(attack_queue, move_queue, build_queue):  # тут вроде и так
 
 
 def income_func():  # прибавка ресурсов НЕ ТРОГАТЬ
-    for player in range(len(ultralist)):
-        for i in range(len(ultralist[player])):
-            for j in range(len(ultralist[player][i])):
-                for k in range(len(ultralist[player][i][j].income)):
-                    ultraresources[str(player + 1)][ultralist[player][i][j].resource[k]] += \
-                    ultralist[player][i][j].income[k] * (1.1 ** (ultralist[player][i][j].level - 1))
+    for player in range(len(ultralist1)):
+        for i in range(len(ultralist1[player])):
+            for j in range(len(ultralist1[player][i])):
+                for k in range(len(ultralist1[player][i][j].income)):
+                    ultraresources[str(player + 1)][ultralist1[player][i][j].resource[k]] += \
+                    ultralist1[player][i][j].income[k] * (1.1 ** (ultralist1[player][i][j].level - 1))
+        print(ultraresources[str(player + 1)])
 
 
 def make_move_great_again(player):  # опять можно двигать все что двигается
@@ -371,6 +378,17 @@ def make_move_great_again(player):  # опять можно двигать вс�
         for i in superdict22.keys():
             for j in superdict22[i]:
                 j.can_move = True
+
+
+def make_attack_great_again(player):  # опять можно стрелять всем что стреляется
+    if player == 1:
+        for i in superdict11.keys():
+            for j in superdict11[i]:
+                j.can_attack = True
+    else:
+        for i in superdict22.keys():
+            for j in superdict22[i]:
+                j.can_attack = True
 
 
 def risuemgranit():  # рисуем гранит
@@ -390,7 +408,6 @@ def risuemgranit():  # рисуем гранит
 news = ''
 
 need_to_sent = 0
-print(capital1, capital2)
 while running:  # основной цикл сервера
     need_to_sent += 1
     map_ = []
@@ -420,7 +437,7 @@ while running:  # основной цикл сервера
     if turn1 != turn:  # заработок ресурсов в ход
         income_func()  # перенести отсюда в место, где прибавляется ход completed
         make_move_great_again(turn % 2 + 1)
-        turn += 1
+        make_attack_great_again(turn % 2 + 1)
         turn1 = turn
 
     data = 0
@@ -459,35 +476,19 @@ while running:  # основной цикл сервера
 
             else:
                 if turn % 2 == 0:
-                    print('\n\n\n\n\n')
                     true = (superdict[command[3]][0] <= resources2['wood'])
-                    print(true)
                     true *= (superdict[command[3]][1] <= resources2['gold'])
-                    print(true)
                     true *= (str(mapa[command[1]][command[2]]) in superdict7[command[3]])
-                    print(true)
                     true *= (int(map_[command[1]][command[2]]) == (2 - turn % 2))
-                    print(true)
-                    print(int(map_[command[1]][command[2]]), command[1], command[2], turn, 2 - turn % 2)
-                    for i in map_:
-                        for j in i:
-                            print(j, end=" ")
-                        print()
-                    print('\n\n\n\n\n')
+
                     if true:
-                        print('v if zashel')
                         ooo = superdict4[command[3]](command[1], command[2], mapa[command[1]][command[2]])
-                        print('объект в порядке')
                         superdict2[command[3]].append(ooo)
-                        print('в супердикт добавился')
                         mapa[command[1]][command[2]] = superdict5[command[3]]
-                        print('обозначение есть')
                         resources2['wood'] -= superdict[command[3]][0]
                         resources2['gold'] -= superdict[command[3]][1]
-                        print('ресурсы списали')
                         news += str(command[3]) + ' ' + str(ooo.x) + ' ' + str(ooo.y) + ' ' + str(
                             turn % 2 + 1) + ' ' + str(ooo.hp)
-                        print('novosti, yoo-hoo')
                         if command[3] == 'tower':  # атаку добавить короче
                             news += " " + str(ooo.atk)
 
@@ -527,80 +528,61 @@ while running:  # основной цикл сервера
                         news += 'update destroy ' + command[2] + " " + command[3]
 
         elif command[0] == 'unit':  # где прибавка хода?
+            turn += 1
             command[1], command[2] = int(command[2]), int(command[1])
-            if turn % 2 == 0:
+            if turn % 2 == 1:
                 true = True
                 true *= (superdict[command[3]][0] <= resources2['wood'])
                 true *= (superdict[command[3]][1] <= resources2['gold'])
                 true *= (superdict[command[3]][2] <= resources2['metal'])
                 true1 = False
-                print(true)
                 try:
                     true1 += (mapa[command[1] - 1][command[2]] == 'M')
-                    print('M')
                 except:
                     pass
                 try:
                     true1 += (mapa[command[1] + 1][command[2]] == 'M')
-                    print('M')
                 except:
                     pass
                 try:
                     true1 += (mapa[command[1]][command[2] - 1] == 'M')
-                    print('M')
                 except:
                     pass
                 try:
                     true1 += (mapa[command[1]][command[2] + 1] == 'M')
-                    print('M')
                 except:
                     pass
-                print(true)
-                print(*[resources2[i] for i in list(resources2.keys())])
-                print(*[resources1[i] for i in list(resources1.keys())])
                 if true and true1:
-                    print('mi v internet...')
                     ooo = superdict4[command[3]](command[1], command[2], mapa[command[1]][command[2]])
-                    print('ооо моя оборона')
                     superdict22[command[3]].append(ooo)
-                    print('appendnuli v massiv')
                     mapa[command[1]][command[2]] = superdict5[command[3]]  # unit 1 2 cruiser
-                    print('мапа мапа')
                     resources2['wood'] -= superdict[command[3]][0]
                     resources2['gold'] -= superdict[command[3]][1]
                     resources2['metal'] -= superdict[command[3]][2]
-                    print('kapitalizm podebil')
                     news += str(command[3]) + ' ' + str(ooo.x) + ' ' + str(ooo.y) + ' ' + str(turn % 2 + 1) + ' ' + str(
                         ooo.hp) + ' ' + str(ooo.atk)
-                    print('свежие новости')
             else:
                 true = True
                 true *= (superdict[command[3]][0] <= resources1['wood'])
                 true *= (superdict[command[3]][1] <= resources1['gold'])
                 true *= (superdict[command[3]][2] <= resources1['metal'])
                 true1 = False
-                print(true)
                 try:
                     true1 += (mapa[command[1] - 1][command[2]] == 'M')
-                    print('M')
                 except:
                     pass
                 try:
                     true1 += (mapa[command[1] + 1][command[2]] == 'M')
-                    print('M')
                 except:
                     pass
                 try:
                     true1 += (mapa[command[1]][command[2] - 1] == 'M')
-                    print('M')
                 except:
                     pass
                 try:
                     true1 += (mapa[command[1]][command[2] + 1] == 'M')
-                    print('M')
                 except:
                     pass
-                print(true)
                 if true and true1:
                     ooo = superdict4[command[3]](command[1], command[2], mapa[command[1]][command[2]])
                     superdict11[command[3]].append(ooo)
@@ -610,57 +592,72 @@ while running:  # основной цикл сервера
                     resources1['metal'] -= superdict[command[3]][2]
                     news += str(command[3]) + ' ' + str(ooo.x) + ' ' + str(ooo.y) + ' ' + str(turn % 2 + 1) + ' ' + str(
                         ooo.hp) + ' ' + str(ooo.atk)
-            turn += 1
+
         elif command[0] == 'move':  # move cruiser 2 5 4 5
             cur_plane = 0
+            for i in range(2, 6):
+                command[i] = int(command[i])
             if turn % 2 == 0:
+
                 for i in superdict22[command[1]]:
                     if i.x == int(command[2]) and i.y == int(command[3]):
                         cur_plane = i
-                if cur_plane and mapa[command[4]][command[5]] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
+                if cur_plane and cur_plane.can_move and str(mapa[command[4]][command[5]]) in ['0', '1', '2', '3', '4',
+                                                                                              '5', '6', '7', '8', '9']:
                     if abs(int(command[2]) - int(command[4])) <= cur_plane.speed and abs(
                             command[3] - command[5]) <= cur_plane.speed:
+                        cur_plane.can_move = False
                         mapa[command[2]][command[3]] = cur_plane.landscape_before
+                        map_[command[4]][command[5]] = '1'
                         mapa[command[4]][command[5]] = superdict5[command[1]]
+                        cur_plane.x = command[4]
+                        cur_plane.y = command[5]
+                        for i in range(2, 6):
+                            command[i] = str(command[i])
                         news += 'update move ' + command[2] + ' ' + command[3] + ' ' + command[4] + ' ' + command[5]
             else:
                 for i in superdict11[command[1]]:
                     if i.x == int(command[2]) and i.y == int(command[3]):
                         cur_plane = i
-                if cur_plane and mapa[command[4]][command[5]] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
+                if cur_plane and cur_plane.can_move and str(mapa[command[4]][command[5]]) in ['0', '1', '2', '3', '4',
+                                                                                              '5', '6', '7', '8', '9']:
                     if abs(int(command[2]) - int(command[4])) <= cur_plane.speed and abs(
                             command[3] - command[5]) <= cur_plane.speed:
+                        cur_plane.can_move = False
                         mapa[command[2]][command[3]] = cur_plane.landscape_before
+                        map_[command[4]][command[5]] = '2'
                         mapa[command[4]][command[5]] = superdict5[command[1]]
+                        cur_plane.x = command[4]
+                        cur_plane.y = command[5]
+                        for i in range(2, 6):
+                            command[i] = str(command[i])
                         news += 'update move ' + command[2] + ' ' + command[3] + ' ' + command[4] + ' ' + command[5]
 
 
 
         elif command[0] == 'attack':  # attack cruiser 2 3 farm 5 6
-            turn += 1
-            if turn % 2 + 1 == 1:
+            print(command)
+            if turn % 2 + 1 == 2:
                 for i in superdict11[command[1]]:
                     if str(i.x) == command[2] and str(i.y) == command[3] and abs(
                             int(command[5]) - int(command[2])) <= i.range and abs(
                             int(command[6]) - int(command[3])) <= i.range:
                         for j in superdict222[command[4]]:
-                            if str(j.x) == command[5] and str(j.y) == command[6]:
+                            if str(j.x) == command[5] and str(j.y) == command[6] and i.can_attack:
                                 j.hp -= i.atk
+                                i.can_attack = False
                                 if j.hp < 1:
-                                    j.destroy()
+                                    mapa[int(command[5])][int(command[6])] = j.destroy()
                                     superdict222[command[4]].remove(j)
-                                    try:
-                                        superdict22[command[4]].remove(j)
-                                    except:
-                                        pass
-                                    try:
-                                        superdict2[command[4]].remove(j)
-                                    except:
-                                        pass
-                                    news = 'update destroy ' + str(j.x) + ' ' + str(j.y)
+                                    if not capital2:
+                                        news = '1 win'
+                                    if not capital1:
+                                        news = '2 win'
+                                    if not news:
+                                        news = 'update destroy ' + str(j.x) + ' ' + str(j.y)
                                     break
-
-                                news = 'update attack ' + str(j.x) + ' ' + str(j.y) + ' ' + str(j.hp)
+                                if not news:
+                                    news = 'update attack ' + str(j.x) + ' ' + str(j.y) + ' ' + str(j.hp)
                                 break
 
             else:
@@ -669,23 +666,22 @@ while running:  # основной цикл сервера
                             int(command[5]) - int(command[2])) <= i.range and abs(
                             int(command[6]) - int(command[3])) <= i.range:
                         for j in superdict111[command[4]]:
-                            if str(j.x) == command[5] and str(j.y) == command[6]:
+                            if str(j.x) == command[5] and str(j.y) == command[6] and i.can_attack:
                                 j.hp -= i.atk
-                                if j.hp < 1:
-                                    j.destroy()
-                                    superdict111[command[4]].remove(j)
-                                    try:
-                                        superdict11[command[4]].remove(j)
-                                    except:
-                                        pass
-                                    try:
-                                        superdict1[command[4]].remove(j)
-                                    except:
-                                        pass
-                                    news = 'update destroy ' + str(j.x) + ' ' + str(j.y)
-                                    break
+                                i.can_attack = False
 
-                                news = 'update attack ' + str(j.x) + ' ' + str(j.y) + ' ' + str(j.hp)
+                                if j.hp < 1:
+                                    mapa[int(command[5])][int(command[6])] = j.destroy()
+                                    superdict111[command[4]].remove(j)
+                                    if not capital2:
+                                        news = '1 win'
+                                    if not capital1:
+                                        news = '2 win'
+                                    if not news:
+                                        news = 'update destroy ' + str(j.x) + ' ' + str(j.y)
+                                    break
+                                if not news:
+                                    news = 'update attack ' + str(j.x) + ' ' + str(j.y) + ' ' + str(j.hp)
                                 break
 
         elif command[0] == 'skip':
@@ -730,10 +726,10 @@ while running:  # основной цикл сервера
 
     for i in superdict11.keys():
         for j in superdict11[i]:
-            map_[j.x][j.y] = '2'
+            map_[int(j.x)][int(j.y)] = '2'
     for i in superdict22.keys():
         for j in superdict22[i]:
-            map_[j.x][j.y] = '1'
+            map_[int(j.x)][int(j.y)] = '1'
 
     s = ''
     for i in range(40):
@@ -766,7 +762,13 @@ while running:  # основной цикл сервера
         need_to_sent = 0
         i = 0
         for sock in players_sockets:
-            super_s = s + "/" + str(turn) + ' ' + resources_array[i] + " " + str(i)
+            if news not in ['1 win', '2 win']:
+                super_s = s + "/" + str(turn) + ' ' + resources_array[i] + " " + str(i)
+            else:
+                if int(news[0]) - 1 == i:
+                    super_s = 'you win'
+                else:
+                    super_s = 'you lose'
             i += 1
             try:
                 sock.send(super_s.encode())
