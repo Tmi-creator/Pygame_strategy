@@ -979,7 +979,6 @@ def start_menu():  # стартовая менюшка чтобы начать �
                     play_level_one_button.unpress(ev.pos[0], ev.pos[1])
 
         CLOCK.tick(FPS)
-        screen.blit(background_img, (0, 0))
         play_level_one_button.render(screen)
         pygame.display.update()
         if play_level_one_button.count > 0:
@@ -1138,7 +1137,6 @@ while Running:  # основной цикл с рендером и геймпл�
                     xframe, yframe = ev.pos[0], ev.pos[1]
                     render_map(screen, allimg, data)
                     draw_frame(xframe, yframe)
-                    ultra_render_interface111(screen, ev.pos[0] // 20, ev.pos[1] // 20)
 
         if ev.type == pygame.MOUSEBUTTONUP:
 
@@ -1203,15 +1201,8 @@ while Running:  # основной цикл с рендером и геймпл�
         except:
             pass
 
-        ultra_render_interface111(screen, xframe // 20, yframe // 20)
     console_button.render(screen)
     pos_button.render(screen)
-    out_console_button.render(screen)
-    out_console_button_2.render(screen)
-    out_console_button_cost.render(screen)
-    move_button.render(screen)
-    atk_button.render(screen)
-    relax_button.render(screen)
     draw_boards(map_)
     draw_frame(xframe, yframe)
 

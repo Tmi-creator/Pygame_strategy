@@ -5,6 +5,7 @@ import socket
 import sys
 import time
 import random
+from pprint import pprint
 from oop import *
 
 pygame.init()
@@ -13,13 +14,13 @@ buildings = [Capital(-100, -100, 0), City(-100, -100, 0), Sawmill(-100, -100, 0)
              FishFarm(-100, -100, 0), StoneMine(-100, -100, 0), MetalMine(-100, -100, 0), PlatinumMine(-100, -100, 0),
              SuperMine(-100, -100, 0), Shipyard(-100, -100, 0),
              Tower(-100, -100, 0), Cruiser(-100, -100, 0), Explorer(-100, -100, 0), Artillery(-100, -100, 0),
-             Wall(-100, -100, 0)]
+             Wall(-100, -100, 0), Lab(-100, -100, 0)]
 my_font = 'Lato-Regular.ttf'  # шрифт
 RED = (255, 50, 50)  # цвета
 GREEN = (50, 255, 50)  # зелененька
 RANGE_COLOUR = (128, 0, 128)  # какое то
 SPEED_COLOUR = (0, 128, 128)  # другое
-recources = [0, 0, 0, 0, 0, 0]
+recources = [0, 0, 0, 0, 0, 0, 0]
 
 
 # внизу классы для кнопок и окошек
@@ -180,6 +181,72 @@ class RelaxButton(Button.Button):
             self.use(atk_button, move_button)
 
 
+class UpgradeButton(Button.Button):
+    def __init__(self, x, y, button_text='Upgrade', command='upgrade ', name='', font_size=30,
+                 font_color=(255, 255, 255),
+                 button_color=(121, 144, 169)):
+        Button.Button.__init__(self, x, y, button_text, font_size, font_color, button_color)
+
+        self.is_active = False
+        self.height = 40
+        self.width = 120
+        self.command = command
+        self.name = name
+
+    def use(self, name):
+        self.command += name
+        self.command = 'READY' + self.command
+
+    def unpress(self, click_x, click_y, name):
+        self.pressed = False
+        if self.x <= click_x <= self.x + self.width and self.y + self.height >= click_y >= self.y and self.active:
+            self.use(name)
+
+
+class UpgradeButton(Button.Button):  # нарисовать и запихать в цикл
+    def __init__(self, x, y, button_text='Upgrade', command='upgrade ', name='', font_size=30,
+                 font_color=(255, 255, 255),
+                 button_color=(121, 144, 169)):
+        Button.Button.__init__(self, x, y, button_text, font_size, font_color, button_color)
+
+        self.is_active = False
+        self.height = 40
+        self.width = 120
+        self.command = command
+        self.name = name
+
+    def use(self, name):
+        self.command += name
+        self.command = 'READY' + self.command
+
+    def unpress(self, click_x, click_y, name):
+        self.pressed = False
+        if self.x <= click_x <= self.x + self.width and self.y + self.height >= click_y >= self.y and self.active:
+            self.use(name)
+
+
+class DestroyButton(Button.Button):  # нарисовать и запихать в цикл
+    def __init__(self, x, y, button_text='Destroy', command='destroy ', name='', font_size=30,
+                 font_color=(255, 255, 255),
+                 button_color=(121, 144, 169)):
+        Button.Button.__init__(self, x, y, button_text, font_size, font_color, button_color)
+
+        self.is_active = False
+        self.height = 40
+        self.width = 120
+        self.command = command
+        self.name = name
+
+    def use(self, name, x, y):
+        self.command += name + ' ' + str(x) + ' ' + str(y)
+        self.command = 'READY' + self.command
+
+    def unpress(self, click_x, click_y, name, x, y):
+        self.pressed = False
+        if self.x <= click_x <= self.x + self.width and self.y + self.height >= click_y >= self.y and self.active:
+            self.use(name, x, y)
+
+
 class DataThings():  # для хранения всего
     def __init__(self, name, x, y, player, hp, atk=''):
         self.name = name
@@ -250,6 +317,7 @@ resource_button_gold = ResourceButton(820, 230, '')
 resource_button_platinum = ResourceButton(820, 280, '')
 resource_button_metal = ResourceButton(820, 330, '')
 resource_button_food = ResourceButton(820, 380, '')
+resource_button_tech = ResourceButton(1080, 80, '')
 
 build_button_capital = BuildButton(980, 80, '1', 'place  capital', 'capital')
 build_button_city = BuildButton(1040, 80, '2', 'place  city', 'city')
@@ -266,6 +334,7 @@ build_button_explorer = BuildButton(1040, 330, 'c', ' unit  explorer', 'explorer
 build_button_artillery = BuildButton(980, 380, 'd', ' unit  artillery', 'artillery')
 build_button_cruiser = BuildButton(1040, 380, 'e', ' unit  cruiser', 'cruiser')
 build_button_wall = BuildButton(980, 430, 'f', 'place  wall', 'wall')
+build_button_lab = BuildButton(1040, 430, 'g', 'place lab', 'lab')
 
 move_button = MoveButton(850, 430)
 atk_button = AtkButton(871, 480)  # переделать прием команды в сервере upd уже все норм (ничего не поменялось)
@@ -275,7 +344,8 @@ build_button_list = [build_button_capital, build_button_city, build_button_sawmi
                      build_button_fish_farm,
                      build_button_stone_mine, build_button_metal_mine, build_button_platinum_mine,
                      build_button_super_mine, build_button_shipyard, build_button_tower,
-                     build_button_explorer, build_button_artillery, build_button_cruiser, build_button_wall]
+                     build_button_explorer, build_button_artillery, build_button_cruiser, build_button_wall,
+                     build_button_lab]
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -299,34 +369,16 @@ for i in range(40):
     for k in range(40):
         b.append(a[k])
     mapa.append(b)
-
+mapa_original = mapa
 map_ = []
 for i in range(40):  # а вот это фигня с границами
     a = ["0"] * 40
     map_.append(a)
 
-# x1, y1 = 9 + randint(-3, 3), 9 + randint(-3, 3)
-# x2, y2 = 29 + randint(-3, 3), 29 + randint(-3, 3)
-# #mapa[x1][y1] = ":"
-# #mapa[x2][y2] = ":"  # столица 2 выше столица 1
-
-# # x3, y3 = 79 + randint(-5, 5), 19+ randint(-5, 5)
-# # x4, y4 = 79 + randint(-5, 5), 79+ randint(-5, 5)
-
-# for i in range(3):
-#     for j in range(3):
-#         map_[x1 - 1 + i][y1 - 1 + j] = 1  # границы столиц
-# for i in range(3):
-#     for j in range(3):
-#         map_[x2 - 1 + i][y2 - 1 + j] = 2
-
-# for i in range(3):
-#     for j in range(3):
-#         map_[x3 - 1 + i][y3 - 1 + j] = 3
-# for i in range(3):
-#     for j in range(3):
-#         map_[x4 - 1 + i][y4 - 1 + j] = 4
-
+mapv = []
+for i in range(40):  # какие клетки нам видно
+    a = ["0"] * 40
+    mapv.append(a)
 
 butcap1 = load_image("img1/butcap1.png")
 butcap2 = load_image("img1/butcap2.png")
@@ -358,6 +410,8 @@ buttow1 = load_image("img1/buttow1.png")
 buttow2 = load_image("img1/buttow2.png")
 butwall1 = load_image("img1/butwall1.png")
 butwall2 = load_image("img1/butwall2.png")
+butlab1 = load_image("img1/butlab1.png")
+butlab2 = load_image("img1/butlab2.png")
 
 water_img = load_image("img1/water.png")
 earth_img = load_image("img1/earth.png")
@@ -409,6 +463,9 @@ super_mine1_img = load_image("img1/super_mine1.png")
 super_mine2_img = load_image("img1/super_mine2.png")
 shipyard1_img = load_image("img1/shipyard1.png")
 shipyard2_img = load_image("img1/shipyard2.png")
+lab1_img = load_image("img1/lab1.png")
+lab2_img = load_image("img1/lab2.png")
+
 wood_img = load_image("img1/wood.png", colorkey=(255, 255, 255))
 stone_img = load_image("img1/stone.png", colorkey=(255, 255, 255))
 gold_img = load_image("img1/gold.png", colorkey=(255, 255, 255))
@@ -416,6 +473,7 @@ platinum_img = load_image("img1/platinum.png", colorkey=(255, 255, 255))
 metal_img = load_image("img1/metal.png", colorkey=(255, 255, 255))
 food_img = load_image("img1/food.png", colorkey=(255, 255, 255))
 turn_img = load_image("img1/turn.png", colorkey=(255, 255, 255))
+tech_img = load_image("img1/tech.png", colorkey=(255, 255, 255))
 
 pygame.display.set_caption("Гнег")
 dict_caps = {  # внизу просто куча словарей с картинками
@@ -500,12 +558,22 @@ dict_shipyards = {  # словарь картинок верфей
     '2': shipyard2_img
 }
 
+dict_shipyards = {  # словарь картинок верфей
+    '1': shipyard1_img,
+    '2': shipyard2_img
+}
+
+dict_labs = {
+    '1': lab1_img,
+    '2': lab2_img
+}
+
 buttons222 = [butcap2, butcity2, butsawmill2, butfarm2, butfish_farm2, butstone_mine2, butmetal_mine2, butplat_mine2,
               butsuper_mine2,
-              butshipyard2, buttow2, butexplorer2, butartillery2, butcruiser2, butwall2]
+              butshipyard2, buttow2, butexplorer2, butartillery2, butcruiser2, butwall2, butlab2]
 buttons111 = [butcap1, butcity1, butsawmill1, butfarm1, butfish_farm1, butstone_mine1, butmetal_mine1, butplat_mine1,
               butsuper_mine1,
-              butshipyard1, buttow1, butexplorer1, butartillery1, butcruiser1, butwall1]
+              butshipyard1, buttow1, butexplorer1, butartillery1, butcruiser1, butwall1, butlab1]
 superdict_butbuildings111 = {
     1: buttons111,
     2: buttons222
@@ -536,7 +604,8 @@ allimg = {  # картинки для всего, что стоит на кар�
     'L': dict_super_mines,
     'M': dict_shipyards,
     'N': dict_towers,
-    'O': dict_walls
+    'O': dict_walls,
+    'P': dict_labs
 }
 
 imginfo = {  # обозначения всего на карте
@@ -564,7 +633,8 @@ imginfo = {  # обозначения всего на карте
     'L': "super_mine",
     'M': "shipyard",
     'N': 'tower',
-    'O': 'wall'
+    'O': 'wall',
+    'P': 'lab'
 }
 
 dict_range = {  # радиус атаки всех юнитов
@@ -580,6 +650,11 @@ dict_speed = {  # скорость всех юнитов
     'cruiser': 3,
     'explorer': 4
 }
+
+dict_maps = {  # для тумана войны
+    '0': mapa_original,
+    '1': mapa
+}
 descriptions = {  # описание зданий и юнтов в кнопках
     'capital': 'main building. should be placement not in\ncenter gives +50 gold and -10 food per turn\n',
     'city': 'gives some territory to you(5x5)\ngives +25 gold and -5 food per turn\n',
@@ -594,8 +669,9 @@ descriptions = {  # описание зданий и юнтов в кнопка�
     'plat_mine': 'produces platinum\n',
     'super_mine': 'produces all!\n',
     'shipyard': 'with it you can build units nearby\n',
-    'tower': 'automaticly attacks nearest enemies\n',
-    'wall': 'they shall not pass!\n'
+    'tower': 'automatically attacks nearest enemies\n',
+    'wall': 'they shall not pass!\n',
+    'lab': 'server connection problems.\n'
 }
 
 costs = {  # цены в кнопках
@@ -613,59 +689,52 @@ costs = {  # цены в кнопках
     'super_mine': '200 wood and 250 gold',
     'shipyard': '150 wood and 350 gold',
     'tower': '150 wood and 150 gold',
-    'wall': '50 wood and 50 gold'
+    'wall': '50 wood and 50 gold',
+    'lab': 'please, try again later'
 }
 
 
-# def render_map(screen, b, f): #рендер мап из файла
-#     f.seek(0)
-#     for i in range(100):
-#         a = str(f.readline())
-#         for j in range(100):
-#             try:
-#                 print(a[j])
-#                 screen.blit(b[int(a[j])], (j * 9, i * 9))
-#             except:
-#                 print(i, j)
-#                 pprint(map_)
-#                 screen.blit(b[ord(mapa[i][j]) - 48][map_[i][j]], (j * 9, i * 9))
-# if a[j].isdigit():
-#     screen.blit(b[int(a[j])], (j * 9, i * 9))
-# else:*/*//*
-#     screen.blit(b[ord(a[j]) - 48][mapa[i][j]], (j * 9, i * 9))
+# dict_meme = {
+#     '1' : allimg[mapa[i][j]][str(map_[i][j])]
+#     '2' : allimg[mapa_original[i][j]]
+# }
 
 
 def render_map(screen, allimg, data):  # пытаемся рендерить с сервера или че то типа того
     global mapa
     global map_
+    global mapv
     mapa = data.split()
     for i in range(40):
-        a = mapa[i]
+        # a = mapa[i]
+
         for j in range(40):
-            try:
-                screen.blit(allimg[a[j]], (j * 20, i * 20))
-            except:
-                screen.blit(allimg[mapa[i][j]][str(map_[i][j])], (j * 20, i * 20))
+            if int(mapv[i][j]) == 1:  # а вдруг вот это не работает
+                if mapa[i][j] > '9':
+                    screen.blit(allimg[mapa[i][j]][str(map_[i][j])], (j * 20, i * 20))
+                    print('')
+                else:
+                    screen.blit(allimg[mapa[i][j]], (j * 20, i * 20))
+            else:
+                screen.blit(allimg[mapa_original[i][j]], (j * 20, i * 20))
+            # try:
+            #     screen.blit(allimg[a[j]], (j * 20, i * 20))
+            # except:
+            #     # try:
+            #     #     screen.blit(allimg[str(dict_maps[mapv[i][j]][i][j])][str(map_[i][j])], (j * 20, i * 20))
+            #     # except:
+            #     #     screen.blit(allimg[str(dict_maps[mapv[i][j]][i][j])], (j * 20, i * 20))
+            #     screen.blit(dict_meme[str(mapv[i][j])], (j * 20, i * 20))
 
 
 def proverka_na_port(i, x, y):  # ставить корабли только около верфи, подсветка кнопок
     true1 = False
-    try:
-        true1 += (mapa[x - 1][y] == 'M')
-    except:
-        pass
-    try:
-        true1 += (mapa[x + 1][y] == 'M')
-    except:
-        pass
-    try:
-        true1 += (mapa[x][y - 1] == 'M')
-    except:
-        pass
-    try:
-        true1 += (mapa[x][y + 1] == 'M')
-    except:
-        pass
+    ways = [[0, 1], [1, 0], [-1, 0], [0, -1]]
+    for z in ways:
+        try:
+            true1 += (mapa[x + z[0]][y + z[1]] == 'M')
+        except:
+            pass
     if not true1:
         build_button_list[i].dark_color = (255, 0, 0)
         build_button_list[i].button_color = (255, 0, 0)
@@ -684,7 +753,7 @@ def ultra_render_interface111(screen, x, y):  # ультра рендер инт
             if build_button_list[i].dark_color == (255, 0, 0):
                 is_port = True
 
-        if is_port or mapa[x][y] not in buildings[i].landscape or int(map_[x][y]) != 1 + int(our_turn):
+        if is_port or mapa[x][y] not in buildings[i].landscape or int(map_[x][y]) != 2 - int(our_turn):
             build_button_list[i].dark_color = (255, 0, 0)
             build_button_list[i].button_color = (255, 0, 0)
         else:
@@ -733,50 +802,10 @@ def ultra_render_interface111(screen, x, y):  # ультра рендер инт
     build_button_list[0].dark_color_pressed = list(
         map(lambda i: (i + 70 if i <= 185 else 255), build_button_list[0].dark_color))
 
-    build_button_capital.render(screen)  # куча кнопок (рендерится)
-    build_button_city.render(screen)
-    build_button_sawmill.render(screen)
-    build_button_farm.render(screen)
-    build_button_fish_farm.render(screen)
-    build_button_stone_mine.render(screen)
-    build_button_metal_mine.render(screen)
-    build_button_platinum_mine.render(screen)
-    build_button_super_mine.render(screen)
-    build_button_shipyard.render(screen)
-    build_button_tower.render(screen)
-    build_button_explorer.render(screen)
-    build_button_artillery.render(screen)
-    build_button_cruiser.render(screen)
-    build_button_wall.render(screen)
-    build_button_cruiser.render(screen)
-
-    screen.blit(superdict_butbuildings111[our_turn + 1][0], (960, 80))
-    screen.blit(superdict_butbuildings111[our_turn + 1][1], (1020, 80))
-    screen.blit(superdict_butbuildings111[our_turn + 1][2], (960, 130))
-    screen.blit(superdict_butbuildings111[our_turn + 1][3], (1020, 130))
-    screen.blit(superdict_butbuildings111[our_turn + 1][4], (960, 180))
-    screen.blit(superdict_butbuildings111[our_turn + 1][5], (1020, 180))
-    screen.blit(superdict_butbuildings111[our_turn + 1][6], (960, 230))
-    screen.blit(superdict_butbuildings111[our_turn + 1][7], (1020, 230))
-    screen.blit(superdict_butbuildings111[our_turn + 1][8], (960, 280))
-    screen.blit(superdict_butbuildings111[our_turn + 1][9], (1020, 280))
-    screen.blit(superdict_butbuildings111[our_turn + 1][10], (960, 330))
-    screen.blit(superdict_butbuildings111[our_turn + 1][11], (1020, 330))
-    screen.blit(superdict_butbuildings111[our_turn + 1][12], (960, 380))
-    screen.blit(superdict_butbuildings111[our_turn + 1][13], (1020, 380))
-    screen.blit(superdict_butbuildings111[our_turn + 1][14], (960, 430))
-
-
-# def write_in_file(f):
-#     f.close()
-#     f = open('input.txt', 'w')
-#     for i in range(100):
-#         gh = []
-#         for k in range(100):
-#             gh.append(mapa[i][k])
-#         f.write(''.join(gh))
-#         f.write('\n')
-#     f.close()/*/*/*/*/*/*/*/*
+    for i in build_button_list:
+        i.render(screen)
+    for i in range(len(superdict_butbuildings111[our_turn + 1])):
+        screen.blit(superdict_butbuildings111[our_turn + 1][i], (960 + 60 * (i % 2), 80 + 50 * (i // 2)))
 
 
 in_menu = True  # для запуска стартового меню
@@ -791,12 +820,13 @@ is_capital = True  # для определения постановки стол
 our_turn = -2  # чтобы знать который ход наш
 
 
-def resources_turn(data='0 75 0 100 0 0 100 -2'):  # тырим у сервера информацию о номере хода и наших ресурсах и рисуем
+def resources_turn(
+        data='0 75 0 100 0 0 100 1 -2'):  # тырим у сервера информацию о номере хода и наших ресурсах и рисуем
     global our_turn, recources
 
     data = data.split()
-    recources = [int(float(data[i])) for i in range(1, 7)]
-    our_turn = int(data[7])
+    recources = [int(float(data[i])) for i in range(1, 8)]
+    our_turn = int(data[8])
     if our_turn > 1000:
         our_turn = 0
     foo = 0
@@ -806,28 +836,20 @@ def resources_turn(data='0 75 0 100 0 0 100 -2'):  # тырим у сервер�
         foo = "НЕТ"
     else:
         foo = "КТО"
+
+    resource_button_array = [resource_button_turn, resource_button_wood, resource_button_stone, resource_button_gold,
+                             resource_button_platinum, resource_button_metal, resource_button_food,
+                             resource_button_tech]
+
     resource_button_turn.button_text = str(int(float(data[0]))) + " " + foo  # опять куча кнопок
-    resource_button_wood.button_text = str(int(float(data[1])))
-    resource_button_stone.button_text = str(int(float(data[2])))
-    resource_button_gold.button_text = str(int(float(data[3])))
-    resource_button_platinum.button_text = str(int(float(data[4])))
-    resource_button_metal.button_text = str(int(float(data[5])))
-    resource_button_food.button_text = str(int(float(data[6])))
-    resource_button_turn.render(screen)
-    resource_button_wood.render(screen)
-    resource_button_stone.render(screen)
-    resource_button_gold.render(screen)
-    resource_button_platinum.render(screen)
-    resource_button_metal.render(screen)
-    resource_button_food.render(screen)
-    build_button_cruiser.render(screen)
-    screen.blit(turn_img, (890, 80))
-    screen.blit(wood_img, (890, 130))
-    screen.blit(stone_img, (890, 180))
-    screen.blit(gold_img, (890, 230))
-    screen.blit(platinum_img, (890, 280))
-    screen.blit(metal_img, (890, 330))
-    screen.blit(food_img, (890, 380))
+    for i in range(len(resource_button_array[1:])):
+        resource_button_array[i + 1].button_text = str(int(float(data[i + 1])))
+    for i in resource_button_array:
+        i.render(screen)
+    img_array = [turn_img, wood_img, stone_img, gold_img, platinum_img, metal_img, food_img]
+    for i in img_array:
+        screen.blit(i, (890, 80 + 50 * img_array.index(i)))
+    screen.blit(tech_img, (1140, 80))
 
 
 def draw_boards(map_):  # рисуем границы государств
@@ -985,7 +1007,6 @@ def main_loop():  # основной гейплей
     abcd = data[len(data) // 2:]
     abcd = abcd.split()
     data = data[:len(data) // 2]
-
     for i in range(40):
         for j in range(40):
             map_[i][j] = abcd[i][j]
@@ -1014,6 +1035,12 @@ def main_loop():  # основной гейплей
 
     resources_turn(new_data[2])
 
+    temp111 = new_data[3].split()
+    pprint(temp111)
+    for i in range(40):
+        for j in range(40):
+            mapv[i][j] = temp111[i][j]
+
 
 def create_particles(position):
     # количество создаваемых частиц
@@ -1041,6 +1068,7 @@ def post_menu_fun():  # активация при разрушении стол�
         CLOCK.tick(50)
         if x == 50 * 20:
             Running = False
+    pygame.quit()
     exit(0)
 
 
@@ -1061,6 +1089,7 @@ def post_menu_unfun():
         CLOCK.tick(50)
         if x == 50 * 20:
             Running = False
+    pygame.quit()
     exit(0)
 
 
@@ -1146,11 +1175,6 @@ while Running:  # основной цикл с рендером и геймпл�
                 sock.send(move_button.command[5:].encode())
                 move_button.command = 'move '
 
-        # if (pause_button.count % 2) == 1:
-        #     paused = True
-        # else:
-        #     paused = False
-
         if ev.type == pygame.KEYDOWN:
             if console_button.is_active:
                 if ev.key == pygame.K_RETURN:
@@ -1162,9 +1186,6 @@ while Running:  # основной цикл с рендером и геймпл�
 
                     console_button.button_text = ''
                     console_button.is_active = False
-                    # data = sock.recv(2 ** 20)  # получаем карту
-                    # data = data.decode()
-                    # out_console_button.button_text = data[3280:]
 
                 elif ev.key == pygame.K_BACKSPACE:
                     console_button.button_text = console_button.button_text[:-1]  # стираем текст
@@ -1176,7 +1197,6 @@ while Running:  # основной цикл с рендером и геймпл�
         screen.blit(interfaceimg_img, (800, 0))
         main_loop()
         need_main_loop = 0
-        draw_frame(xframe, yframe)
         try:
             draw_range(int(data1.y) * 20, int(data1.x) * 20)
             draw_speed(int(data1.y) * 20, int(data1.x) * 20)  # ацтань уже спать пора
@@ -1193,8 +1213,7 @@ while Running:  # основной цикл с рендером и геймпл�
     atk_button.render(screen)
     relax_button.render(screen)
     draw_boards(map_)
-
-    # write_in_file(f)
+    draw_frame(xframe, yframe)
 
     pygame.display.update()
 pygame.quit()

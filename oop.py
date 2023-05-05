@@ -83,6 +83,7 @@ class Tower(Building):
         self.atk = 50
         self.range = 5
         self.target = 'none'
+        self.can_attack = True
 
     def attack(self):
         if abs(self.target.x - self.x) <= self.range and abs(self.target.y - self.y) <= self.range:
@@ -94,6 +95,11 @@ class Tower(Building):
 class Wall(Building):
     def __init__(self, x=-1000, y=-1000, landscape_before=-1):
         Building.__init__(self, x, y,landscape_before, 1200, [0, 0], [-5], ['1', '2', '3', '4', '5', '6', '7', '8', '9'], ['gold'], 1)
+
+
+class Lab(Building):
+    def __init__(self, x = -1000, y = -1000, landscape_before = -1):
+        Building.__init__(self, x, y, landscape_before, 250, [0, 0], [-20], ['8'], ['gold'], 1)
 
 
 class Unit():  # родительский класс юнита
@@ -143,5 +149,5 @@ class Explorer(Unit):
 
 class Artillery(Unit):
     def __init__(self, x=-1000, y=-1000, landscape_before=-1):
-        Unit.__init__(self, x, y, 100, [0, 0, 0], [-50], 100, 2, 6, 1, landscape_before)
+        Unit.__init__(self, x, y, 100, [0, 0, 0], [-50], 100, 2, 7, 1, landscape_before)
         self.landscape_before = landscape_before
