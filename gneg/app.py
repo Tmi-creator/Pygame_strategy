@@ -91,7 +91,7 @@ class App:
         if not resume:
             self.persist()
             if game.mode == "solo":
-                self.notify("Постройте лесопилку или выберите фрегат, чтобы выйти в море.")
+                self.notify("Нажмите R для исследований. Разведчик поможет занять маяк.")
 
     def new_game(self, mode):
         if self.saved and self.saved.winner is None:
@@ -135,8 +135,16 @@ class App:
         if action == self.game.dismantle:
             self.audio.play("build")
 
+    def toggle_research(self):
+        if self.overlay == "research":
+            self.overlay = ""
+        elif self.page == "match" and not self.overlay:
+            self.overlay = "research"
+
     def process_change(self):
         event = self.game.events[-1]
+        if event.effect == "research" and self.viewer in event.audience:
+            self.audio.play("build")
         if (
             event.effect and self.viewer in event.audience and
             (event.target in self.game.visible[self.viewer] or self.game.winner is not None)
@@ -185,7 +193,7 @@ class App:
         self.overlay = ""
         self.selected = START_CAPITALS[self.viewer]
         if self.game.round == 1:
-            self.notify("Постройте лесопилку или выберите фрегат, чтобы выйти в море.")
+            self.notify("Нажмите R для исследований. Разведчик поможет занять маяк.")
         self.audio.play("turn")
 
     def map_click(self, pos):
@@ -265,6 +273,8 @@ class App:
                 self.toggle_fullscreen()
             elif key == pg.K_m:
                 self.toggle_audio()
+            elif key == pg.K_r:
+                self.toggle_research()
             elif key == pg.K_ESCAPE:
                 self.cancel()
             elif self.overlay == "handoff" and key in (pg.K_RETURN, pg.K_SPACE):

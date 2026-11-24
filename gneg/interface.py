@@ -11,10 +11,11 @@ from .art import (
     piece_icon, resource_icon, tile_at,
 )
 from .catalog import (
-    ACTIONS, BUILD_GROUPS, COLS, FACTIONS, PIECES, RESOURCES, RESOURCE_NAMES, ROWS, TERRAIN,
+    BUILD_GROUPS, COLS, FACTIONS, PIECES, RESOURCES, RESOURCE_NAMES, ROWS, TERRAIN,
     make_map,
 )
 from .game import Game, REPAIR_COST
+from .research import BEACONS, BRANCHES, CAPSTONES, CONTROL_TURNS
 
 SIZE = (1328, 812)
 ASSETS = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1])) / "assets"
@@ -186,10 +187,10 @@ class Interface:
         side = FACTION_COLOURS[who]
         self.canvas.fill(BACKGROUND)
         self.panel((20, 17, 1288, 57), PANEL, LINE, 8)
-        self.text("ГНЕГ", 41, 24, 27, TEXT, bold=True, serif=True)
+        self.text("ГНЕГ", 41, 27, 27, TEXT, bold=True, serif=True)
         income = game.revenue(who)
         for index, kind in enumerate(RESOURCES):
-            x = 228 + index * 147
+            x = 170 + index * 138
             pg.draw.line(self.canvas, LINE, (x - 12, 27), (x - 12, 64))
             resource_icon(self.canvas, kind, x + 8, 48, 19)
             self.text(RESOURCE_NAMES[kind], x + 26, 24, 13, MUTED)
@@ -197,10 +198,12 @@ class Interface:
             delta = income[kind]
             if delta:
                 self.text(f"{delta:+}", x + 83, 44, 15, GREEN if delta > 0 else RED)
-        self.button("Меню  ≡", (1146, 27, 140, 37), lambda: setattr(app, "overlay", "pause"), size=16)
+        self.button(f"Наука  {game.science[who]}  ·  R", (1002, 27, 155, 37), app.toggle_research, size=16)
+        self.button("Меню  ≡", (1169, 27, 117, 37), lambda: setattr(app, "overlay", "pause"), size=16)
         pg.draw.circle(self.canvas, side, (45, 101), 5)
         self.text(FACTIONS[who], 58, 88, 21, side, bold=True)
         self.text(f"Раунд {game.round}", 271, 92, 17, MUTED)
+        self.draw_beacon_status(who)
         status = "Партия завершена" if game.winner is not None else "Ваш ход" if app.can_control else "Ход Южной лиги…"
         self.text(status, 952, 91, 18, GOLD if app.can_control else MUTED, bold=True, align="right")
 
@@ -219,6 +222,34 @@ class Interface:
         if len(events) > 1:
             self.text(events[-2], 119, 773, 14, MUTED)
         self.text("Tab · флот     F1 · справка", 952, 774, 14, MUTED, align="right")
+
+    def draw_beacon_status(self, who):
+        game = self.app.game
+        for index, pos in enumerate(BEACONS):
+            colour = FACTION_COLOURS[owner] if (owner := game.territory.get(pos)) is not None else MUTED
+            x = 379 + index * 19
+            pg.draw.polygon(self.canvas, colour, ((x, 94), (x + 6, 100), (x, 106), (x - 6, 100)), 2)
+        status = f"Маяки  {len(game.owned_beacons(who))}/{len(BEACONS)}"
+        if any(game.control):
+            leader = 0 if game.control[0] else 1
+            status += f"    ·    Удержание  {game.control[leader]}/{CONTROL_TURNS}"
+            colour = FACTION_COLOURS[leader]
+        else:
+            colour = MUTED
+        self.text(status, 412, 91, 16, colour)
+
+    def draw_beacon(self, rect, owner, occupied=False):
+        colour = GOLD if owner is None else FACTION_COLOURS[owner]
+        x, y = rect.center
+        pg.draw.circle(self.canvas, colour, (x, y), 16, 2)
+        if occupied:
+            return
+        pg.draw.circle(self.canvas, (25, 43, 50), (x, y), 13)
+        pg.draw.polygon(self.canvas, (222, 214, 182), ((x - 6, y + 9), (x - 3, y - 4), (x + 3, y - 4), (x + 6, y + 9)))
+        pg.draw.rect(self.canvas, colour, (x - 4, y - 8, 8, 5))
+        pg.draw.polygon(self.canvas, colour, ((x - 6, y - 8), (x, y - 12), (x + 6, y - 8)))
+        pg.draw.line(self.canvas, colour, (x - 10, y - 6), (x - 14, y - 7))
+        pg.draw.line(self.canvas, colour, (x + 10, y - 6), (x + 14, y - 7))
 
     def draw_board(self, hover):
         app, game = self.app, self.app.game
@@ -240,6 +271,8 @@ class Interface:
             rect = tile_at(pos)
             if pos not in visible:
                 self.canvas.blit(self.fog if pos in game.seen[who] else unknown, rect)
+                if pos in BEACONS:
+                    self.draw_beacon(rect, game.territory.get(pos))
                 continue
             owner = game.territory.get(pos)
             if owner is not None:
@@ -252,6 +285,8 @@ class Interface:
                 self.canvas.blit(self.build_tile, rect)
                 pg.draw.rect(self.canvas, GOLD, rect.inflate(-5, -5), 1)
             piece = game.pieces.get(pos)
+            if pos in BEACONS:
+                self.draw_beacon(rect, owner, occupied=piece is not None)
             if piece:
                 colour = FACTION_COLOURS[piece.owner]
                 pg.draw.circle(self.canvas, (22, 42, 48), rect.center, 15)
@@ -349,9 +384,10 @@ class Interface:
         self.paragraph(line, x + 17, 622, SIDE_W - 34, 14, MUTED, 17)
         pg.draw.line(self.canvas, LINE, (x + 15, 661), (x + SIDE_W - 15, 661))
         remaining = game.actions if app.can_control else 0
-        self.text(f"Действия  {remaining} / {ACTIONS}", x + 16, 673, 16, TEXT)
-        for index in range(ACTIONS):
-            cx = x + SIDE_W - 23 - (ACTIONS - 1 - index) * 20
+        capacity = game.turn_capacity
+        self.text(f"Действия  {remaining} / {capacity}", x + 16, 673, 16, TEXT)
+        for index in range(capacity):
+            cx = x + SIDE_W - 23 - (capacity - 1 - index) * 20
             diamond = ((cx, 674), (cx + 6, 680), (cx, 686), (cx - 6, 680))
             pg.draw.polygon(self.canvas, GOLD if index < remaining else LINE, diamond, 0 if index < remaining else 1)
         self.button("Завершить ход   ·   Пробел", (x + 15, 703, SIDE_W - 30, 44), app.end_turn,
@@ -383,6 +419,14 @@ class Interface:
         self.text(f"{chr(65 + pos[0])}{pos[1] + 1}", x + 281, 110, 14, GOLD, align="right")
         who = app.viewer
         visible = pos in game.visible[who] or game.winner is not None
+        if pos in BEACONS and (not visible or pos not in game.pieces):
+            owner = game.territory.get(pos)
+            self.text("Сигнальный маяк", x + 12, 136, 22, TEXT, bold=True)
+            self.text("Нейтральный" if owner is None else FACTIONS[owner],
+                      x + 12, 166, 15, MUTED if owner is None else FACTION_COLOURS[owner])
+            self.paragraph("Приносит 1 науку за ход. Чтобы взять маяк, включите его в свою территорию.",
+                           x + 12, 194, 266, 14, MUTED, 17)
+            return
         if not visible:
             self.text("Туман войны", x + 12, 140, 23, TEXT, bold=True)
             hint = "Сейчас эту клетку не видно." if pos in game.seen[who] else "Отправьте флот на разведку."
@@ -401,7 +445,8 @@ class Interface:
         self.text(piece.spec.name, x + 50, 132, 20, TEXT, bold=True)
         self.text(f"Ур. {piece.level} · {piece.hp}/{piece.max_hp} ОЗ", x + 50, 157, 14, FACTION_COLOURS[piece.owner])
         if piece.spec.speed:
-            status = f"Ход {piece.spec.speed} · Дальн. {piece.spec.reach} · Урон {piece.damage}"
+            damage = game.firepower(piece) if own else piece.damage
+            status = f"Ход {game.speed(piece)} · Дальн. {game.reach(piece)} · Урон {damage}"
             if own and (piece.moved or piece.fired):
                 spent = "ход и залп" if piece.moved and piece.fired else "ход" if piece.moved else "залп"
                 status = f"Израсходован: {spent}." if not (piece.moved and piece.fired) else "Ход и залп израсходованы."
@@ -409,7 +454,7 @@ class Interface:
             gains = [f"+{value} {SHORT_RESOURCES[key].lower()}" for key, value in game.piece_income(piece)]
             status = "  /  ".join(gains) + " за ход"
         elif piece.kind == "tower":
-            status = f"Дальн. {piece.spec.reach} · Урон {piece.damage}"
+            status = f"Дальн. {game.reach(piece)} · Урон {game.firepower(piece)}"
         else:
             status = FACTIONS[piece.owner] if not own else terrain
         self.text(status, x + 12, 185, 14, MUTED)
@@ -436,6 +481,9 @@ class Interface:
         if mode in ("help", "help_pause"):
             self.draw_help()
             return
+        if mode == "research":
+            self.draw_research()
+            return
         if mode == "pause":
             self.panel((center - 224, 180, 448, 448), PANEL, LINE, 12)
             self.text("Пауза", center, 211, 39, TEXT, serif=True, align="center")
@@ -456,7 +504,8 @@ class Interface:
         elif mode == "result":
             who = app.game.winner
             title = "Победа!" if app.game.mode == "solo" and who == 0 else "Поражение" if app.game.mode == "solo" else "Победа"
-            self.modal(title, FACTIONS[who], f"Столица соперника пала. Партия завершилась в раунде {app.game.round}.",
+            reason = "Оба маяка удержаны" if app.game.win_reason == "beacons" else "Столица соперника пала"
+            self.modal(title, FACTIONS[who], f"{reason}. Конец партии · раунд {app.game.round}.",
                        "Новая партия", lambda: app.enter_game(Game(app.game.mode)),
                        "Посмотреть карту", app.cancel, FACTION_COLOURS[who])
             self.button("Главное меню", (center - 100, 548, 200, 38), app.main_menu, size=15)
@@ -481,11 +530,49 @@ class Interface:
         self.button(primary, (center - 245, 470, 236, 54), confirm, primary=True)
         self.button(secondary, (center + 9, 470, 236, 54), cancel)
 
+    def draw_research(self):
+        app, game = self.app, self.app.game
+        side = app.viewer
+        self.panel((77, 53, 1174, 706), PANEL, LINE, 12)
+        self.text("Исследования", 108, 75, 42, TEXT, serif=True)
+        self.text(f"Наука   {game.science[side]}   +{game.science_income(side)} / ход",
+                  1215, 91, 24, GOLD, align="right", bold=True)
+        self.text("Столица, академия и маяки дают науку. Исследование стоит одно действие.", 110, 137, 17, MUTED)
+        pg.draw.line(self.canvas, LINE, (110, 169), (1217, 169))
+        for column, branch in enumerate(BRANCHES):
+            x = 110 + column * 377
+            colour = branch.colour
+            self.text(branch.name, x, 182, 25, colour, bold=True)
+            for row, tech in enumerate(branch.technologies):
+                y = 219 + row * 154
+                known = game.has_tech(side, tech.key)
+                error = game.research_error(tech.key, side)
+                edge = colour if known or not error else LINE
+                if row:
+                    pg.draw.line(self.canvas, edge, (x + 22, y - 16), (x + 22, y), 2)
+                    pg.draw.circle(self.canvas, edge, (x + 22, y - 8), 3)
+                self.panel((x, y, 353, 138), INSET if known else (20, 36, 45), edge, 8)
+                self.text(("I", "II", "III")[row], x + 14, y + 13, 13, colour, bold=True)
+                self.text(tech.name, x + 46, y + 9, 21, TEXT, bold=True)
+                self.text(f"{tech.cost} науки", x + 337, y + 15, 13, colour, align="right")
+                self.paragraph(tech.effect, x + 14, y + 42, 326, 15, MUTED, 17)
+                if known:
+                    self.text("Изучено", x + 15, y + 108, 15, colour, bold=True)
+                else:
+                    self.text(error or ("Специализация" if tech.key in CAPSTONES else "Доступно"),
+                              x + 15, y + 108, 13, MUTED)
+                    self.button("Изучить", (x + 242, y + 99, 98, 30),
+                                lambda key=tech.key: app.execute(game.research, key),
+                                primary=not error, enabled=not error, size=14)
+        self.text("III уровень требует академию. За партию можно выбрать одну специализацию.",
+                  110, 702, 16, MUTED)
+        self.button("К карте   ·   R", (1056, 691, 162, 40), app.toggle_research, size=16)
+
     def draw_help(self):
         x, y, w = 272, 83, 784
         self.panel((x, y, w, 646), PANEL, LINE, 12)
         self.text("Как играть", x + 38, y + 28, 43, TEXT, serif=True)
-        self.text("Цель — уничтожить столицу соперника.", x + 40, y + 95, 21, GOLD, bold=True)
+        self.text("Уничтожьте столицу или удержите оба маяка три своих хода.", x + 40, y + 95, 20, GOLD, bold=True)
         sections = (
             ("Ход", "За ход можно выполнить три действия. Доход поступает в начале вашего хода. "
                     "Разведанная местность остаётся на карте, но объекты за туманом скрыты."),
@@ -495,13 +582,13 @@ class Interface:
             ("Флот и бой", "Спускайте корабли рядом со своей верфью. Выберите корабль: голубые точки показывают, "
                           "куда он может доплыть, красные углы — кого можно атаковать. "
                           "Каждый корабль может один раз двигаться и один раз стрелять за ход."),
-            ("Оборона", "Башни стреляют автоматически в конце вашего хода. Форты снижают урон по соседним зданиям. "
-                        "Корабли можно чинить рядом со своей верфью."),
+            ("Маяки и наука", "Маяк даёт науку, пока находится внутри ваших границ. Город удерживает берег, "
+                               "когда разведчик уходит. Нажмите R, чтобы выбрать исследование."),
         )
         for index, (title, body) in enumerate(sections):
             py = y + 147 + index * 96
             pg.draw.line(self.canvas, LINE, (x + 38, py), (x + w - 38, py))
             self.text(title, x + 40, py + 14, 18, TEXT, bold=True)
             self.paragraph(body, x + 180, py + 13, w - 218, 17, MUTED, 21)
-        self.text("Пробел · конец хода    Tab · следующий корабль    Esc · назад", x + 40, y + 555, 16, MUTED)
+        self.text("Пробел · конец хода    Tab · следующий корабль    R · исследования    Esc · назад", x + 40, y + 555, 16, MUTED)
         self.button("Готово", (x + w - 184, y + 590, 145, 37), self.app.cancel, primary=True)
